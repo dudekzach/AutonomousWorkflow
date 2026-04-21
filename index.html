@@ -269,6 +269,18 @@ Tips:
           </div>
         </div>
 
+        <div style="margin-top: 16px;">
+          <label class="label" for="fileInput">Attach files</label>
+          <input id="fileInput" type="file" multiple />
+          <div class="footer-note">Attach supporting files like notes, transcripts, PDFs, or drafts. They will be included as context for the workflow.</div>
+          <div class="artifact-box" style="margin-top: 10px;">
+            <div class="label">Selected files</div>
+            <ul class="artifact-list" id="selectedFiles">
+              <li class="muted">No files selected.</li>
+            </ul>
+          </div>
+        </div>
+
         <div class="actions">
           <button class="primary" id="runBtn">Run workflow</button>
           <button class="secondary" id="clearBtn" type="button">Clear results</button>
@@ -317,6 +329,8 @@ Tips:
     const promptEl = document.getElementById('prompt');
     const userIdEl = document.getElementById('userId');
     const maxIterationsEl = document.getElementById('maxIterations');
+    const fileInputEl = document.getElementById('fileInput');
+    const selectedFilesEl = document.getElementById('selectedFiles');
     const runBtn = document.getElementById('runBtn');
     const clearBtn = document.getElementById('clearBtn');
     const statusEl = document.getElementById('status');
@@ -389,6 +403,21 @@ Tips:
       });
     }
 
+    function renderSelectedFiles(files) {
+      selectedFilesEl.innerHTML = '';
+
+      if (!files || files.length === 0) {
+        selectedFilesEl.innerHTML = '<li class="muted">No files selected.</li>';
+        return;
+      }
+
+      Array.from(files).forEach(file => {
+        const li = document.createElement('li');
+        li.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
+        selectedFilesEl.appendChild(li);
+      });
+    }
+
     function clearResults() {
       summaryEl.textContent = 'No run yet.';
       fullOutputEl.textContent = 'Run the workflow to see output here.';
@@ -400,8 +429,9 @@ Tips:
 
     async function runWorkflow() {
       const prompt = promptEl.value.trim();
-      const userId = userIdEl.value.trim() || null;
+      const userId = userIdEl.value.trim() || '';
       const maxIterations = Number(maxIterationsEl.value || 3);
+      const files = fileInputEl.files;
 
       if (!prompt) {
         setStatus('Prompt cannot be empty.', 'error');
@@ -412,17 +442,18 @@ Tips:
       setStatus('Submitting workflow request...', 'info');
 
       try {
-        const response = await fetch(`${API_BASE}/run`, {
+        const formData = new FormData();
+        formData.append('prompt', prompt);
+        formData.append('max_iterations', String(maxIterations));
+        formData.append('user_id', userId);
+
+        Array.from(files).forEach(file => {
+          formData.append('files', file);
+        });
+
+        const response = await fetch(`${API_BASE}/run-with-files`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            prompt,
-            max_iterations: maxIterations,
-            user_id: userId,
-            options: {}
-          })
+          body: formData
         });
 
         if (!response.ok) {
@@ -451,7 +482,12 @@ Tips:
     }
 
     runBtn.addEventListener('click', runWorkflow);
-    clearBtn.addEventListener('click', clearResults);
+    fileInputEl.addEventListener('change', () => renderSelectedFiles(fileInputEl.files));
+    clearBtn.addEventListener('click', () => {
+      fileInputEl.value = '';
+      renderSelectedFiles(fileInputEl.files);
+      clearResults();
+    });
   </script>
 </body>
 </html>
