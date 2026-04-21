@@ -1,12 +1,13 @@
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from autonomous_compare_runner import run_autonomous_compare
+
 
 app = FastAPI(title="Autonomous Workflow API")
 
@@ -43,3 +44,60 @@ def run_workflow(request: RunRequest) -> Dict[str, Any]:
         user_id=request.user_id,
         options=request.options,
     )
+
+
+def build_file_context(file_payloads: List[Dict[str, str]]) -> str:
+    if not file_payloads:
+        return ""
+
+    sections = []
+    for item in file_payloads:
+        sections.append(
+            f"""Filename: {item["filename"]}
+Content:
+{item["content"]}"""
+        )
+
+    return "\n\n--- ATTACHED FILES CONTEXT ---\n\n" + "\n\n====\n\n".join(sections)
+
+
+@app.post("/run-with-files")
+async def run_workflow_with_files(
+    prompt: str = Form(...),
+    max_iterations: int = Form(3),
+    user_id: Optional[str] = Form(None),
+    files: List[UploadFile] = File(default=[]),
+) -> Dict[str, Any]:
+    file_payloads: List[Dict[str, str]] = []
+
+    for uploaded_file in files:
+        raw = await uploaded_file.read()
+
+        try:
+            content = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                content = raw.decode("latin-1")
+            except UnicodeDecodeError:
+                content = "[Binary or unsupported text encoding. File uploaded successfully, but content could not be decoded as text.]"
+
+        file_payloads.append(
+            {
+                "filename": uploaded_file.filename or "unnamed_file",
+                "content": content[:20000],  # keep first 20k chars per file for now
+            }
+        )
+
+    combined_prompt = prompt + build_file_context(file_payloads)
+
+    result = run_autonomous_compare(
+        prompt=combined_prompt,
+        max_iterations=max_iterations,
+        user_id=user_id,
+        options={
+            "attached_filenames": [f["filename"] for f in file_payloads]
+        },
+    )
+
+    result["attached_files"] = [f["filename"] for f in file_payloads]
+    return result
