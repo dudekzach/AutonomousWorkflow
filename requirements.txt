@@ -4,3 +4,4 @@ openai
 anthropic
 python-dotenv
 truststore
+python-multipart
