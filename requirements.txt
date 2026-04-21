@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+openai
+anthropic
+python-dotenv
+truststore
