@@ -774,8 +774,12 @@ def render_score_table(openai_scores: ScoreCard, claude_scores: ScoreCard) -> st
 def get_final_output_text(last_record: IterationRecord) -> str:
     """
     Determines the best final output.
-    Combines outputs when follow-up is an enhancement, not a replacement.
+    Prefers stitched results when a continuation was required.
     """
+
+    if last_record.stitched_result and (last_record.stitched_result.text or "").strip():
+        return last_record.stitched_result.text
+
     if not last_record.post_action_result:
         winner = last_record.judge_decision.winner
         if winner == "OpenAI":
@@ -835,6 +839,19 @@ def build_html(records: List[IterationRecord], initial_prompt: str) -> str:
             </div>
             """
 
+        stitched_html = ""
+        if record.stitched_result:
+            stitched_html = f"""
+            <div class="section action">
+                <div class="title">Stitched Final Result</div>
+                <div class="subtitle">
+                    Provider: {esc(record.stitched_result.provider)} |
+                    Model: {esc(record.stitched_result.model)}
+                </div>
+                <pre>{esc(record.stitched_result.text or record.stitched_result.error)}</pre>
+            </div>
+            """
+
         score_table = render_score_table(
             record.judge_decision.openai_scores,
             record.judge_decision.claude_scores,
@@ -891,6 +908,7 @@ def build_html(records: List[IterationRecord], initial_prompt: str) -> str:
             </div>
 
             {post_action_html}
+            {stitched_html}
         </div>
         """
         )
@@ -1069,6 +1087,7 @@ def save_outputs(
                     "claude_scores": r.judge_decision.claude_scores.__dict__,
                 },
                 "post_action_result": r.post_action_result.__dict__ if r.post_action_result else None,
+                "stitched_result": r.stitched_result.__dict__ if r.stitched_result else None,
             }
             for r in records
         ],
