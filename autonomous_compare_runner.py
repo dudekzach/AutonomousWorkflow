@@ -90,6 +90,7 @@ class IterationRecord:
     claude_result: ProviderResult
     judge_decision: JudgeDecision
     post_action_result: Optional[ProviderResult] = None
+    stitched_result: Optional[ProviderResult] = None
 
 
 # =========================
@@ -488,6 +489,42 @@ Return only valid JSON matching the schema.
     )
 
 
+def stitch_final_response(
+    provider: str,
+    model: str,
+    original_prompt: str,
+    base_text: str,
+    continuation_text: str,
+) -> ProviderResult:
+    stitch_prompt = f"""
+You are cleaning up a two-part draft response.
+
+The original response was cut off.
+A continuation response was generated afterward.
+
+Your job:
+1. Merge both parts into one complete final answer.
+2. Remove any duplicated content.
+3. Remove any cut-off fragments or incomplete sentences.
+4. Preserve the strongest structure, tone, and detail.
+5. Return only the final cleaned answer.
+
+Original user prompt:
+{original_prompt}
+
+Part 1 (cut off original answer):
+{base_text}
+
+Part 2 (continuation):
+{continuation_text}
+""".strip()
+
+    if provider == "Claude":
+        return call_claude_new_chat(ClaudeChatState(), stitch_prompt, model=model)
+    else:
+        return call_openai_new_chat(stitch_prompt, model=model)
+
+
 # =========================
 # Orchestrator
 # =========================
@@ -622,6 +659,28 @@ def run_autonomous_loop(initial_prompt: str, max_iterations: int = MAX_ITERATION
                 )
                 break
 
+            stitched_result: Optional[ProviderResult] = None
+
+            if post_action_result:
+                if target_provider == "Claude":
+                    base_text = claude_result.text or ""
+                    stitched_result = stitch_final_response(
+                        provider="Claude",
+                        model=CLAUDE_MODEL,
+                        original_prompt=active_prompt,
+                        base_text=base_text,
+                        continuation_text=post_action_result.text or "",
+                    )
+                elif target_provider == "OpenAI":
+                    base_text = openai_result.text or ""
+                    stitched_result = stitch_final_response(
+                        provider="OpenAI",
+                        model=OPENAI_MODEL,
+                        original_prompt=active_prompt,
+                        base_text=base_text,
+                        continuation_text=post_action_result.text or "",
+                    )
+
             records.append(
                 IterationRecord(
                     iteration=iteration,
@@ -630,6 +689,7 @@ def run_autonomous_loop(initial_prompt: str, max_iterations: int = MAX_ITERATION
                     claude_result=claude_result,
                     judge_decision=judge,
                     post_action_result=post_action_result,
+                    stitched_result=stitched_result,
                 )
             )
             break
