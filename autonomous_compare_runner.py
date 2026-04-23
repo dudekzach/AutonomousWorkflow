@@ -867,7 +867,7 @@ def run_autonomous_loop(
 
     options = options or {}
     optimization_result = optimize_prompt(initial_prompt, options)
-    active_prompt = optimization_result.get("optimized_prompt", "").strip() or initial_prompt
+    active_prompt = optimization_result.optimized_prompt.strip() or initial_prompt
 
     for iteration in range(1, max_iterations + 1):
         openai_result = call_openai_new_chat(active_prompt)
