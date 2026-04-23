@@ -83,6 +83,22 @@ class ClaudeChatState:
 
 
 @dataclass
+class PromptOptimizationResult:
+    original_prompt: str
+    optimized_prompt: str
+    annotated_explanation: str
+    optional_variants: List[str]
+    provider: str
+    strategy: str
+    target_model: Optional[str] = None
+    use_case: Optional[str] = None
+    tone_style: Optional[str] = None
+    output_format: Optional[str] = None
+    selection_reason: Optional[str] = None
+    raw_response: Optional[str] = None
+
+
+@dataclass
 class IterationRecord:
     iteration: int
     active_prompt: str
@@ -91,6 +107,7 @@ class IterationRecord:
     judge_decision: JudgeDecision
     post_action_result: Optional[ProviderResult] = None
     stitched_result: Optional[ProviderResult] = None
+    prompt_optimization: Optional[PromptOptimizationResult] = None
 
 
 # =========================
@@ -525,17 +542,332 @@ Part 2 (continuation):
         return call_openai_new_chat(stitch_prompt, model=model)
 
 
+PROMPT_OPTIMIZER_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "optimized_prompt": {"type": "string"},
+        "annotated_explanation": {"type": "string"},
+        "optional_variants": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+    },
+    "required": ["optimized_prompt", "annotated_explanation", "optional_variants"],
+}
+
+PROMPT_OPTIMIZER_SELECTION_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "selected_provider": {
+            "type": "string",
+            "enum": ["OpenAI", "Claude"],
+        },
+        "selected_optimized_prompt": {"type": "string"},
+        "reason": {"type": "string"},
+    },
+    "required": ["selected_provider", "selected_optimized_prompt", "reason"],
+}
+
+
+def extract_json_object(text: str) -> Dict[str, Any]:
+    cleaned = (text or "").strip()
+
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:].strip()
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        cleaned = cleaned[start : end + 1]
+
+    return json.loads(cleaned)
+
+
+def build_optimizer_prompt(
+    original_prompt: str,
+    target_model: Optional[str] = None,
+    use_case: Optional[str] = None,
+    tone_style: Optional[str] = None,
+    output_format: Optional[str] = None,
+) -> str:
+    details = []
+    if target_model:
+        details.append(f"Target model: {target_model}")
+    if use_case:
+        details.append(f"Use case: {use_case}")
+    if tone_style:
+        details.append(f"Desired tone/style: {tone_style}")
+    if output_format:
+        details.append(f"Preferred output format: {output_format}")
+
+    context_block = "\n".join(details) if details else "No additional optimization context provided."
+
+    return f"""
+You are a prompt optimization expert.
+
+Optimize the user's prompt for maximum clarity, specificity, structure, efficiency, and creativity control.
+
+Evaluate the prompt across:
+- Clarity
+- Specificity
+- Structure
+- Efficiency
+- Creativity control
+
+Additional optimization context:
+{context_block}
+
+Return only valid JSON matching the schema with:
+1. optimized_prompt
+2. annotated_explanation
+3. optional_variants (0-3 concise alternatives)
+
+User prompt:
+{original_prompt}
+""".strip()
+
+
+def optimize_prompt_with_openai(
+    original_prompt: str,
+    *,
+    target_model: Optional[str] = None,
+    use_case: Optional[str] = None,
+    tone_style: Optional[str] = None,
+    output_format: Optional[str] = None,
+) -> PromptOptimizationResult:
+    prompt = build_optimizer_prompt(
+        original_prompt=original_prompt,
+        target_model=target_model,
+        use_case=use_case,
+        tone_style=tone_style,
+        output_format=output_format,
+    )
+
+    response = openai_client.responses.create(
+        model=OPENAI_MODEL,
+        input=prompt,
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "prompt_optimizer",
+                "strict": True,
+                "schema": PROMPT_OPTIMIZER_SCHEMA,
+            }
+        },
+    )
+
+    data = json.loads(response.output_text)
+    return PromptOptimizationResult(
+        original_prompt=original_prompt,
+        optimized_prompt=data["optimized_prompt"],
+        annotated_explanation=data["annotated_explanation"],
+        optional_variants=data["optional_variants"],
+        provider="OpenAI",
+        strategy="single_openai",
+        target_model=target_model,
+        use_case=use_case,
+        tone_style=tone_style,
+        output_format=output_format,
+        raw_response=response.output_text,
+    )
+
+
+def optimize_prompt_with_claude(
+    original_prompt: str,
+    *,
+    target_model: Optional[str] = None,
+    use_case: Optional[str] = None,
+    tone_style: Optional[str] = None,
+    output_format: Optional[str] = None,
+) -> PromptOptimizationResult:
+    prompt = build_optimizer_prompt(
+        original_prompt=original_prompt,
+        target_model=target_model,
+        use_case=use_case,
+        tone_style=tone_style,
+        output_format=output_format,
+    )
+
+    response = anthropic_client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text_parts = [
+        block.text for block in response.content
+        if getattr(block, "type", "") == "text"
+    ]
+    text = "\n".join(text_parts).strip()
+    data = extract_json_object(text)
+
+    return PromptOptimizationResult(
+        original_prompt=original_prompt,
+        optimized_prompt=data["optimized_prompt"],
+        annotated_explanation=data["annotated_explanation"],
+        optional_variants=data["optional_variants"],
+        provider="Claude",
+        strategy="single_claude",
+        target_model=target_model,
+        use_case=use_case,
+        tone_style=tone_style,
+        output_format=output_format,
+        raw_response=text,
+    )
+
+
+def select_best_optimized_prompt(
+    original_prompt: str,
+    openai_optimized: PromptOptimizationResult,
+    claude_optimized: PromptOptimizationResult,
+) -> Dict[str, str]:
+    selection_prompt = f"""
+You are evaluating two optimized prompts for the same original prompt.
+
+Choose the optimized prompt that will most likely produce the best downstream model performance.
+
+Selection criteria:
+- clarity
+- specificity
+- structure
+- efficiency
+- preservation of user intent
+- usefulness across strong LLMs
+
+Original prompt:
+{original_prompt}
+
+OpenAI optimized prompt:
+{openai_optimized.optimized_prompt}
+
+Claude optimized prompt:
+{claude_optimized.optimized_prompt}
+
+Return only valid JSON matching the schema.
+""".strip()
+
+    response = openai_client.responses.create(
+        model=JUDGE_MODEL,
+        input=selection_prompt,
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "prompt_optimizer_selection",
+                "strict": True,
+                "schema": PROMPT_OPTIMIZER_SELECTION_SCHEMA,
+            }
+        },
+    )
+    return json.loads(response.output_text)
+
+
+def optimize_prompt(
+    original_prompt: str,
+    options: Optional[Dict[str, Any]] = None,
+) -> PromptOptimizationResult:
+    options = options or {}
+
+    optimize_enabled = options.get("optimize_prompt", True)
+    strategy = options.get("optimizer_strategy", "compare_both")
+    target_model = options.get("optimizer_target_model")
+    use_case = options.get("optimizer_use_case")
+    tone_style = options.get("optimizer_tone_style")
+    output_format = options.get("optimizer_output_format")
+
+    if not optimize_enabled:
+        return PromptOptimizationResult(
+            original_prompt=original_prompt,
+            optimized_prompt=original_prompt,
+            annotated_explanation="Prompt optimization was disabled for this run.",
+            optional_variants=[],
+            provider="None",
+            strategy="disabled",
+            target_model=target_model,
+            use_case=use_case,
+            tone_style=tone_style,
+            output_format=output_format,
+        )
+
+    if strategy == "single_claude":
+        result = optimize_prompt_with_claude(
+            original_prompt,
+            target_model=target_model,
+            use_case=use_case,
+            tone_style=tone_style,
+            output_format=output_format,
+        )
+        result.strategy = strategy
+        return result
+
+    if strategy == "single_openai":
+        result = optimize_prompt_with_openai(
+            original_prompt,
+            target_model=target_model,
+            use_case=use_case,
+            tone_style=tone_style,
+            output_format=output_format,
+        )
+        result.strategy = strategy
+        return result
+
+    openai_result = optimize_prompt_with_openai(
+        original_prompt,
+        target_model=target_model,
+        use_case=use_case,
+        tone_style=tone_style,
+        output_format=output_format,
+    )
+    claude_result = optimize_prompt_with_claude(
+        original_prompt,
+        target_model=target_model,
+        use_case=use_case,
+        tone_style=tone_style,
+        output_format=output_format,
+    )
+    selection = select_best_optimized_prompt(
+        original_prompt=original_prompt,
+        openai_optimized=openai_result,
+        claude_optimized=claude_result,
+    )
+
+    selected_provider = selection["selected_provider"]
+    selected_result = openai_result if selected_provider == "OpenAI" else claude_result
+    selected_result.strategy = "compare_both"
+    selected_result.selection_reason = selection["reason"]
+    selected_result.raw_response = json.dumps(
+        {
+            "selected_provider": selected_provider,
+            "selection_reason": selection["reason"],
+            "openai_optimizer": openai_result.raw_response,
+            "claude_optimizer": claude_result.raw_response,
+        },
+        indent=2,
+    )
+    selected_result.optimized_prompt = selection["selected_optimized_prompt"]
+
+    return selected_result
+
+
 # =========================
 # Orchestrator
 # =========================
 
-def run_autonomous_loop(initial_prompt: str, max_iterations: int = MAX_ITERATIONS) -> List[IterationRecord]:
+def run_autonomous_loop(
+    initial_prompt: str,
+    max_iterations: int = MAX_ITERATIONS,
+    options: Optional[Dict[str, Any]] = None,
+) -> List[IterationRecord]:
     records: List[IterationRecord] = []
 
     openai_state = OpenAIChatState()
     claude_state = ClaudeChatState()
 
-    active_prompt = initial_prompt
+    options = options or {}
+    optimization_result = optimize_prompt(initial_prompt, options)
+    active_prompt = optimization_result.optimized_prompt.strip() or initial_prompt
 
     for iteration in range(1, max_iterations + 1):
         openai_result = call_openai_new_chat(active_prompt)
@@ -557,6 +889,7 @@ def run_autonomous_loop(initial_prompt: str, max_iterations: int = MAX_ITERATION
                     claude_result=claude_result,
                     judge_decision=judge,
                     post_action_result=None,
+                    prompt_optimization=optimization_result,
                 )
             )
             break
@@ -570,6 +903,7 @@ def run_autonomous_loop(initial_prompt: str, max_iterations: int = MAX_ITERATION
                     claude_result=claude_result,
                     judge_decision=judge,
                     post_action_result=None,
+                    prompt_optimization=optimization_result,
                 )
             )
             active_prompt = judge.revised_prompt.strip() or active_prompt
@@ -690,6 +1024,7 @@ def run_autonomous_loop(initial_prompt: str, max_iterations: int = MAX_ITERATION
                     judge_decision=judge,
                     post_action_result=post_action_result,
                     stitched_result=stitched_result,
+                    prompt_optimization=optimization_result,
                 )
             )
             break
@@ -702,6 +1037,7 @@ def run_autonomous_loop(initial_prompt: str, max_iterations: int = MAX_ITERATION
                 claude_result=claude_result,
                 judge_decision=judge,
                 post_action_result=None,
+                prompt_optimization=optimization_result,
             )
         )
         break
@@ -866,6 +1202,30 @@ def build_html(records: List[IterationRecord], initial_prompt: str) -> str:
                 <strong>Active Prompt</strong>
                 <pre>{esc(record.active_prompt)}</pre>
             </div>
+
+            {"".join([
+                f"""
+            <div class="prompt-block">
+                <strong>Prompt Optimization</strong>
+                <div class="subtitle">
+                    Provider: {esc(record.prompt_optimization.provider)} |
+                    Strategy: {esc(record.prompt_optimization.strategy)} |
+                    Target Model: {esc(record.prompt_optimization.target_model or "N/A")} |
+                    Use Case: {esc(record.prompt_optimization.use_case or "N/A")} |
+                    Tone/Style: {esc(record.prompt_optimization.tone_style or "N/A")} |
+                    Output Format: {esc(record.prompt_optimization.output_format or "N/A")}
+                </div>
+                <strong>Optimized Prompt</strong>
+                <pre>{esc(record.prompt_optimization.optimized_prompt)}</pre>
+                <strong>What Changed and Why</strong>
+                <pre>{esc(record.prompt_optimization.annotated_explanation)}</pre>
+                <strong>Optional Variants</strong>
+                <pre>{esc("\n\n".join(record.prompt_optimization.optional_variants) if record.prompt_optimization.optional_variants else "N/A")}</pre>
+                <strong>Optimizer Selection Reason</strong>
+                <pre>{esc(record.prompt_optimization.selection_reason or "N/A")}</pre>
+            </div>
+                """ if record.prompt_optimization else ""
+            ])}
 
             <div class="judge-summary">
                 <div><strong>Winner:</strong> {esc(record.judge_decision.winner)}</div>
@@ -1088,6 +1448,7 @@ def save_outputs(
                 },
                 "post_action_result": r.post_action_result.__dict__ if r.post_action_result else None,
                 "stitched_result": r.stitched_result.__dict__ if r.stitched_result else None,
+                "prompt_optimization": r.prompt_optimization.__dict__ if r.prompt_optimization else None,
             }
             for r in records
         ],
@@ -1125,8 +1486,7 @@ def run_autonomous_compare(
     user_id: Optional[str] = None,
     options: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    del user_id
-    del options
+    options = options or {}
 
     start_time = time.time()
     logs: List[str] = []
@@ -1137,10 +1497,13 @@ def run_autonomous_compare(
             raise ValueError("Prompt cannot be empty")
 
         logs.append("Starting autonomous workflow")
+        logs.append(f"Prompt optimization enabled: {options.get('optimize_prompt', True)}")
+        logs.append(f"Prompt optimizer strategy: {options.get('optimizer_strategy', 'compare_both')}")
 
         records = run_autonomous_loop(
             initial_prompt=prompt,
             max_iterations=max_iterations,
+            options=options,
         )
 
         logs.append(f"Completed {len(records)} iteration(s)")
@@ -1148,6 +1511,8 @@ def run_autonomous_compare(
         last = records[-1]
         final_output = get_final_output_text(last)
         logs.append("Final output extracted")
+        if last.prompt_optimization:
+            logs.append(f"Optimizer provider: {last.prompt_optimization.provider}")
 
         output_paths = save_outputs(records, prompt, open_browser=False)
         logs.append("Outputs saved successfully")
@@ -1207,6 +1572,14 @@ def main() -> None:
         prompt=args.prompt,
         max_iterations=args.max_iterations,
         user_id="local_user",
+        options={
+            "optimize_prompt": True,
+            "optimizer_strategy": "compare_both",
+            "optimizer_target_model": None,
+            "optimizer_use_case": None,
+            "optimizer_tone_style": None,
+            "optimizer_output_format": None,
+        },
     )
 
     if result["status"] == "success":
