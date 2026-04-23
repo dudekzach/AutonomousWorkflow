@@ -38,12 +38,19 @@ def health_check() -> Dict[str, str]:
 
 @app.post("/run")
 def run_workflow(request: RunRequest) -> Dict[str, Any]:
-    return run_autonomous_compare(
+    print("API: /run called")
+    print(f"API: prompt length={len(request.prompt) if request.prompt else 0}")
+    print(f"API: max_iterations={request.max_iterations}")
+
+    result = run_autonomous_compare(
         prompt=request.prompt,
         max_iterations=request.max_iterations,
         user_id=request.user_id,
         options=request.options,
     )
+
+    print(f"API: /run completed with status={result.get('status')}")
+    return result
 
 
 def build_file_context(file_payloads: List[Dict[str, str]]) -> str:
@@ -68,6 +75,11 @@ async def run_workflow_with_files(
     user_id: Optional[str] = Form(None),
     files: List[UploadFile] = File(default=[]),
 ) -> Dict[str, Any]:
+    print("API: /run-with-files called")
+    print(f"API: prompt length={len(prompt) if prompt else 0}")
+    print(f"API: file count={len(files)}")
+    print(f"API: max_iterations={max_iterations}")
+
     file_payloads: List[Dict[str, str]] = []
 
     for uploaded_file in files:
@@ -100,4 +112,5 @@ async def run_workflow_with_files(
     )
 
     result["attached_files"] = [f["filename"] for f in file_payloads]
+    print(f"API: /run-with-files completed with status={result.get('status')}")
     return result
