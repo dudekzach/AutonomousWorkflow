@@ -1049,8 +1049,12 @@ def run_autonomous_loop(
 # Reporting helpers
 # =========================
 
-def esc(text: Optional[str]) -> str:
-    return html.escape(text or "")
+def esc(text: Optional[Any]) -> str:
+    if text is None:
+        return ""
+    if isinstance(text, (dict, list)):
+        return html.escape(json.dumps(text, indent=2, ensure_ascii=False))
+    return html.escape(str(text))
 
 
 def score_total(score: ScoreCard) -> int:
