@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import time
+import traceback
 
 from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -18,12 +20,29 @@ OUTPUTS_DIR.mkdir(exist_ok=True)
 
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 
+# TEMPORARY DEBUG SWITCH:
+# Set to True to force optimizer off for all API calls.
+# Set back to False once you've finished diagnosing the 502 issue.
+FORCE_OPTIMIZER_OFF = True
+
 
 class RunRequest(BaseModel):
     prompt: str
     max_iterations: int = 3
     user_id: Optional[str] = None
     options: Optional[Dict[str, Any]] = None
+
+
+def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    merged_options: Dict[str, Any] = dict(options or {})
+
+    if FORCE_OPTIMIZER_OFF:
+        # Include a couple common flag names to maximize compatibility
+        # with the runner while debugging.
+        merged_options["optimizer_enabled"] = False
+        merged_options["enable_optimizer"] = False
+
+    return merged_options
 
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
@@ -37,20 +56,47 @@ def health_check() -> Dict[str, str]:
 
 
 @app.post("/run")
-def run_workflow(request: RunRequest) -> Dict[str, Any]:
+def run_workflow(request: RunRequest):
+    start_time = time.time()
     print("API: /run called")
-    print(f"API: prompt length={len(request.prompt) if request.prompt else 0}")
-    print(f"API: max_iterations={request.max_iterations}")
 
-    result = run_autonomous_compare(
-        prompt=request.prompt,
-        max_iterations=request.max_iterations,
-        user_id=request.user_id,
-        options=request.options,
-    )
+    try:
+        prompt_length = len(request.prompt) if request.prompt else 0
+        print(f"API: /run prompt length={prompt_length}")
+        print(f"API: /run max_iterations={request.max_iterations}")
+        print(f"API: /run user_id={request.user_id}")
 
-    print(f"API: /run completed with status={result.get('status')}")
-    return result
+        options = build_runner_options(request.options)
+        print(f"API: /run options={options}")
+
+        print("API: /run starting runner")
+        result = run_autonomous_compare(
+            prompt=request.prompt,
+            max_iterations=request.max_iterations,
+            user_id=request.user_id,
+            options=options,
+        )
+        print("API: /run runner completed")
+
+        elapsed = time.time() - start_time
+        print(f"API: /run completed with status={result.get('status')} in {elapsed:.2f}s")
+        return result
+
+    except Exception as e:
+        elapsed = time.time() - start_time
+        print(f"API ERROR: /run failed after {elapsed:.2f}s")
+        print(f"API ERROR: {type(e).__name__}: {e}")
+        traceback.print_exc()
+
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "error": str(e),
+                "endpoint": "/run",
+                "elapsed_seconds": round(elapsed, 2),
+            },
+        )
 
 
 def build_file_context(file_payloads: List[Dict[str, str]]) -> str:
@@ -74,43 +120,90 @@ async def run_workflow_with_files(
     max_iterations: int = Form(3),
     user_id: Optional[str] = Form(None),
     files: List[UploadFile] = File(default=[]),
-) -> Dict[str, Any]:
+):
+    start_time = time.time()
     print("API: /run-with-files called")
-    print(f"API: prompt length={len(prompt) if prompt else 0}")
-    print(f"API: file count={len(files)}")
-    print(f"API: max_iterations={max_iterations}")
 
-    file_payloads: List[Dict[str, str]] = []
+    try:
+        print(f"API: /run-with-files prompt length={len(prompt) if prompt else 0}")
+        print(f"API: /run-with-files file count={len(files)}")
+        print(f"API: /run-with-files max_iterations={max_iterations}")
+        print(f"API: /run-with-files user_id={user_id}")
 
-    for uploaded_file in files:
-        raw = await uploaded_file.read()
+        file_payloads: List[Dict[str, str]] = []
 
-        try:
-            content = raw.decode("utf-8")
-        except UnicodeDecodeError:
+        for uploaded_file in files:
+            print(f"API: reading uploaded file={uploaded_file.filename}")
+            raw = await uploaded_file.read()
+
             try:
-                content = raw.decode("latin-1")
+                content = raw.decode("utf-8")
             except UnicodeDecodeError:
-                content = "[Binary or unsupported text encoding. File uploaded successfully, but content could not be decoded as text.]"
+                try:
+                    content = raw.decode("latin-1")
+                except UnicodeDecodeError:
+                    content = (
+                        "[Binary or unsupported text encoding. File uploaded successfully, "
+                        "but content could not be decoded as text.]"
+                    )
 
-        file_payloads.append(
+            file_payloads.append(
+                {
+                    "filename": uploaded_file.filename or "unnamed_file",
+                    "content": content[:20000],  # keep first 20k chars per file for now
+                }
+            )
+
+        combined_prompt = prompt + build_file_context(file_payloads)
+
+        options = build_runner_options(
             {
-                "filename": uploaded_file.filename or "unnamed_file",
-                "content": content[:20000],  # keep first 20k chars per file for now
+                "attached_filenames": [f["filename"] for f in file_payloads]
             }
         )
+        print(f"API: /run-with-files options={options}")
+        print("API: /run-with-files starting runner")
 
-    combined_prompt = prompt + build_file_context(file_payloads)
+        result = run_autonomous_compare(
+            prompt=combined_prompt,
+            max_iterations=max_iterations,
+            user_id=user_id,
+            options=options,
+        )
 
-    result = run_autonomous_compare(
-        prompt=combined_prompt,
-        max_iterations=max_iterations,
-        user_id=user_id,
-        options={
-            "attached_filenames": [f["filename"] for f in file_payloads]
-        },
-    )
+        result["attached_files"] = [f["filename"] for f in file_payloads]
 
-    result["attached_files"] = [f["filename"] for f in file_payloads]
-    print(f"API: /run-with-files completed with status={result.get('status')}")
-    return result
+        elapsed = time.time() - start_time
+        print(
+            f"API: /run-with-files completed with status={result.get('status')} "
+            f"in {elapsed:.2f}s"
+        )
+        return result
+
+    except Exception as e:
+        elapsed = time.time() - start_time
+        print(f"API ERROR: /run-with-files failed after {elapsed:.2f}s")
+        print(f"API ERROR: {type(e).__name__}: {e}")
+        traceback.print_exc()
+
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "error": str(e),
+                "endpoint": "/run-with-files",
+                "elapsed_seconds": round(elapsed, 2),
+            },
+        )
+
+
+@app.post("/run-test")
+def run_test(request: RunRequest) -> Dict[str, Any]:
+    print("API: /run-test called")
+    return {
+        "status": "ok",
+        "message": "run-test endpoint reached successfully",
+        "prompt_length": len(request.prompt) if request.prompt else 0,
+        "max_iterations": request.max_iterations,
+        "user_id": request.user_id,
+    }
