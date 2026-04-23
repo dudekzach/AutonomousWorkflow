@@ -26,7 +26,7 @@ class RunRequest(BaseModel):
     options: Optional[Dict[str, Any]] = None
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def serve_index() -> str:
     return INDEX_HTML_PATH.read_text(encoding="utf-8")
 
