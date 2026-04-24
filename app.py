@@ -1,9 +1,12 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
 import time
 import traceback
+import uuid
+import threading
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -25,12 +28,83 @@ app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 # Set back to False once you've finished diagnosing the 502 issue.
 FORCE_OPTIMIZER_OFF = True
 
+# Temporary in-memory job store
+# Later this can be replaced with Redis
+jobs: Dict[str, Dict[str, Any]] = {}
+
 
 class RunRequest(BaseModel):
     prompt: str
     max_iterations: int = 3
     user_id: Optional[str] = None
     options: Optional[Dict[str, Any]] = None
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def create_job(
+    prompt: str,
+    max_iterations: int = 3,
+    user_id: Optional[str] = None,
+    options: Optional[Dict[str, Any]] = None,
+) -> str:
+    job_id = str(uuid.uuid4())
+
+    jobs[job_id] = {
+        "job_id": job_id,
+        "status": "queued",
+        "stage": "queued",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+        "request": {
+            "prompt": prompt,
+            "max_iterations": max_iterations,
+            "user_id": user_id,
+            "options": options or {},
+        },
+        "results": {
+            "openai": {
+                "status": "pending",
+                "output": None,
+                "latency_seconds": None,
+                "error": None,
+            },
+            "claude": {
+                "status": "pending",
+                "output": None,
+                "latency_seconds": None,
+                "error": None,
+            },
+            "judge": {
+                "status": "pending",
+                "output": None,
+                "latency_seconds": None,
+                "error": None,
+            },
+        },
+        "runner_result": None,
+        "final_output": None,
+        "artifacts": {
+            "html_path": None,
+            "json_path": None,
+        },
+        "error": None,
+    }
+
+    return job_id
+
+
+def update_job(job_id: str, **fields: Any) -> None:
+    job = jobs.get(job_id)
+    if not job:
+        return
+
+    for key, value in fields.items():
+        job[key] = value
+
+    job["updated_at"] = now_iso()
 
 
 def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -44,6 +118,83 @@ def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, 
     return merged_options
 
 
+def process_job(job_id: str) -> None:
+    job = jobs.get(job_id)
+    if not job:
+        print(f"PROCESS_JOB: job_id={job_id} not found")
+        return
+
+    request_data = job["request"]
+    prompt = request_data["prompt"]
+    max_iterations = request_data["max_iterations"]
+    user_id = request_data["user_id"]
+    options = request_data["options"]
+
+    start_time = time.time()
+    print(f"PROCESS_JOB: started job_id={job_id}")
+
+    try:
+        update_job(job_id, status="running", stage="starting")
+
+        prompt_length = len(prompt) if prompt else 0
+        print(f"PROCESS_JOB: prompt length={prompt_length}")
+        print(f"PROCESS_JOB: max_iterations={max_iterations}")
+        print(f"PROCESS_JOB: user_id={user_id}")
+        print(f"PROCESS_JOB: options={options}")
+
+        update_job(job_id, stage="running_runner")
+
+        result = run_autonomous_compare(
+            prompt=prompt,
+            max_iterations=max_iterations,
+            user_id=user_id,
+            options=options,
+        )
+
+        elapsed = time.time() - start_time
+
+        # Store full raw runner result for debugging / inspection
+        jobs[job_id]["runner_result"] = result
+
+        # Best-effort extraction of top-level result fields
+        jobs[job_id]["final_output"] = (
+            result.get("final_output")
+            or result.get("output")
+            or result.get("response")
+            or result.get("best_response")
+        )
+
+        artifact_paths = result.get("artifacts", {}) if isinstance(result.get("artifacts"), dict) else {}
+        jobs[job_id]["artifacts"]["html_path"] = (
+            artifact_paths.get("html")
+            or result.get("html_path")
+        )
+        jobs[job_id]["artifacts"]["json_path"] = (
+            artifact_paths.get("json")
+            or result.get("json_path")
+        )
+
+        jobs[job_id]["status"] = result.get("status", "completed")
+        jobs[job_id]["stage"] = "done"
+        jobs[job_id]["updated_at"] = now_iso()
+
+        print(
+            f"PROCESS_JOB: completed job_id={job_id} "
+            f"status={jobs[job_id]['status']} in {elapsed:.2f}s"
+        )
+
+    except Exception as e:
+        elapsed = time.time() - start_time
+        print(f"PROCESS_JOB ERROR: job_id={job_id} failed after {elapsed:.2f}s")
+        print(f"PROCESS_JOB ERROR: {type(e).__name__}: {e}")
+        traceback.print_exc()
+
+        jobs[job_id]["status"] = "failed"
+        jobs[job_id]["stage"] = "failed"
+        jobs[job_id]["error"] = str(e)
+        jobs[job_id]["updated_at"] = now_iso()
+
+
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def serve_index() -> str:
     return INDEX_HTML_PATH.read_text(encoding="utf-8")
@@ -54,9 +205,16 @@ def health_check() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/status/{job_id}")
+def get_status(job_id: str) -> Dict[str, Any]:
+    job = jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
 @app.post("/run")
 def run_workflow(request: RunRequest):
-    start_time = time.time()
     print("API: /run called")
 
     try:
@@ -68,22 +226,32 @@ def run_workflow(request: RunRequest):
         options = build_runner_options(request.options)
         print(f"API: /run options={options}")
 
-        print("API: /run starting runner")
-        result = run_autonomous_compare(
+        job_id = create_job(
             prompt=request.prompt,
             max_iterations=request.max_iterations,
             user_id=request.user_id,
             options=options,
         )
-        print("API: /run runner completed")
 
-        elapsed = time.time() - start_time
-        print(f"API: /run completed with status={result.get('status')} in {elapsed:.2f}s")
-        return result
+        print(f"API: /run created job_id={job_id}")
+
+        thread = threading.Thread(
+            target=process_job,
+            args=(job_id,),
+            daemon=True,
+        )
+        thread.start()
+
+        print(f"API: /run background thread started for job_id={job_id}")
+
+        return {
+            "job_id": job_id,
+            "status": "queued",
+            "message": "Workflow started successfully",
+        }
 
     except Exception as e:
-        elapsed = time.time() - start_time
-        print(f"API ERROR: /run failed after {elapsed:.2f}s")
+        print("API ERROR: /run failed before job start")
         print(f"API ERROR: {type(e).__name__}: {e}")
         traceback.print_exc()
 
@@ -93,7 +261,6 @@ def run_workflow(request: RunRequest):
                 "status": "error",
                 "error": str(e),
                 "endpoint": "/run",
-                "elapsed_seconds": round(elapsed, 2),
             },
         )
 
@@ -149,7 +316,7 @@ async def run_workflow_with_files(
             file_payloads.append(
                 {
                     "filename": uploaded_file.filename or "unnamed_file",
-                    "content": content[:20000],  # keep first 20k chars per file for now
+                    "content": content[:20000],
                 }
             )
 
