@@ -9,6 +9,7 @@ import webbrowser
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
+from pathlib import Path
 
 from dotenv import load_dotenv
 
