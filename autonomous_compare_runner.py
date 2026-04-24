@@ -1625,15 +1625,14 @@ def save_outputs(
     initial_prompt: str,
     open_browser: bool = True,
 ) -> Dict[str, str]:
-    OUTPUTS_DIR.mkdir(exist_ok=True)
-
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     html_filename = f"autonomous_run_{timestamp}.html"
     json_filename = f"autonomous_run_{timestamp}.json"
 
-    html_path = OUTPUTS_DIR / html_filename
-    json_path = OUTPUTS_DIR / json_filename
+    html_path = os.path.join(OUTPUTS_DIR, html_filename)
+    json_path = os.path.join(OUTPUTS_DIR, json_filename)
 
     payload = {
         "initial_prompt": initial_prompt,
@@ -1673,13 +1672,13 @@ def save_outputs(
     print(f"SAVE_OUTPUTS: OUTPUTS_DIR={OUTPUTS_DIR}", flush=True)
     print(f"SAVE_OUTPUTS: html_file_path={html_path}", flush=True)
     print(f"SAVE_OUTPUTS: json_file_path={json_path}", flush=True)
-    print(f"SAVE_OUTPUTS: cwd={Path.cwd()}", flush=True)
-    print(f"SAVE_OUTPUTS: html_exists={html_path.exists()}", flush=True)
-    print(f"SAVE_OUTPUTS: json_exists={json_path.exists()}", flush=True)
+    print(f"SAVE_OUTPUTS: html_exists={os.path.exists(html_path)}", flush=True)
+    print(f"SAVE_OUTPUTS: json_exists={os.path.exists(json_path)}", flush=True)
+    print(f"SAVE_OUTPUTS: cwd={os.getcwd()}", flush=True)
 
     if open_browser:
         try:
-            webbrowser.open(str(html_path.resolve()))
+            webbrowser.open(os.path.abspath(html_path))
         except Exception:
             pass
 
@@ -1687,7 +1686,6 @@ def save_outputs(
         "html_path": f"outputs/{html_filename}",
         "json_path": f"outputs/{json_filename}",
     }
-
 
 # =========================
 # Wrapper
