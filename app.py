@@ -172,18 +172,23 @@ def process_job(job_id: str) -> None:
 
                 artifact_type = artifact.get("type")
                 artifact_path = artifact.get("path")
-             
+
                 if artifact_type == "html":
                     jobs[job_id]["artifacts"]["html_path"] = artifact_path
                 elif artifact_type == "json":
                     jobs[job_id]["artifacts"]["json_path"] = artifact_path
-        
+
         print(f"PROCESS_JOB: BASE_DIR={BASE_DIR}", flush=True)
         print(f"PROCESS_JOB: OUTPUTS_DIR={OUTPUTS_DIR}", flush=True)
-        print(f"PROCESS_JOB: extracted html_path={jobs[job_id]['artifacts']['html_path']}", flush=True)
-        print(f"PROCESS_JOB: extracted json_path={jobs[job_id]['artifacts']['json_path']}", flush=True)
+        print(
+            f"PROCESS_JOB: extracted html_path={jobs[job_id]['artifacts']['html_path']}",
+            flush=True,
+        )
+        print(
+            f"PROCESS_JOB: extracted json_path={jobs[job_id]['artifacts']['json_path']}",
+            flush=True,
+        )
 
-        
         jobs[job_id]["status"] = result.get("status", "completed")
         jobs[job_id]["stage"] = "done"
         jobs[job_id]["updated_at"] = now_iso()
