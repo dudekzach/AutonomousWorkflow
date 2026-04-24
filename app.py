@@ -37,8 +37,7 @@ def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, 
     merged_options: Dict[str, Any] = dict(options or {})
 
     if FORCE_OPTIMIZER_OFF:
-        # Include a couple common flag names to maximize compatibility
-        # with the runner while debugging.
+        merged_options["optimize_prompt"] = False
         merged_options["optimizer_enabled"] = False
         merged_options["enable_optimizer"] = False
 
