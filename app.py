@@ -153,10 +153,8 @@ def process_job(job_id: str) -> None:
 
         elapsed = time.time() - start_time
 
-        # Store full raw runner result for debugging / inspection
         jobs[job_id]["runner_result"] = result
 
-        # Best-effort extraction of top-level result fields
         jobs[job_id]["final_output"] = (
             result.get("final_output")
             or result.get("full_output")
@@ -167,18 +165,18 @@ def process_job(job_id: str) -> None:
 
         artifacts = result.get("artifacts", [])
 
-    if isinstance(artifacts, list):
-    for artifact in artifacts:
-        if not isinstance(artifact, dict):
-            continue
+        if isinstance(artifacts, list):
+            for artifact in artifacts:
+                if not isinstance(artifact, dict):
+                    continue
 
-        artifact_type = artifact.get("type")
-        artifact_path = artifact.get("path")
+                artifact_type = artifact.get("type")
+                artifact_path = artifact.get("path")
 
-        if artifact_type == "html":
-            jobs[job_id]["artifacts"]["html_path"] = artifact_path
-        elif artifact_type == "json":
-            jobs[job_id]["artifacts"]["json_path"] = artifact_path
+                if artifact_type == "html":
+                    jobs[job_id]["artifacts"]["html_path"] = artifact_path
+                elif artifact_type == "json":
+                    jobs[job_id]["artifacts"]["json_path"] = artifact_path
 
         jobs[job_id]["status"] = result.get("status", "completed")
         jobs[job_id]["stage"] = "done"
