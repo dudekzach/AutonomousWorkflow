@@ -38,7 +38,8 @@ ENABLE_OPTIMIZER_BY_DEFAULT = os.getenv("ENABLE_OPTIMIZER", "true").lower() == "
 ENABLE_STITCHING_BY_DEFAULT = os.getenv("ENABLE_STITCHING", "true").lower() == "true"
 LOG_TO_STDOUT = os.getenv("LOG_TO_STDOUT", "true").lower() == "true"
 FORCE_DISABLE_OPTIMIZER = True
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
 
 # =========================
 # Data structures
@@ -1624,12 +1625,15 @@ def save_outputs(
     initial_prompt: str,
     open_browser: bool = True,
 ) -> Dict[str, str]:
-    os.makedirs("outputs", exist_ok=True)
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    html_path = f"outputs/autonomous_run_{timestamp}.html"
-    json_path = f"outputs/autonomous_run_{timestamp}.json"
+    html_filename = f"autonomous_run_{timestamp}.html"
+    json_filename = f"autonomous_run_{timestamp}.json"
 
+    html_path = os.path.join(OUTPUTS_DIR, html_filename)
+    json_path = os.path.join(OUTPUTS_DIR, json_filename)
+    
     payload = {
         "initial_prompt": initial_prompt,
         "records": [
@@ -1666,7 +1670,11 @@ def save_outputs(
     print("\nRun complete.")
     print(f"HTML report: {html_path}")
     print(f"JSON log:    {json_path}")
-
+    print(f"HTML absolute path: {html_path}")
+    print(f"JSON absolute path: {json_path}")
+    print(f"HTML exists: {os.path.exists(html_path)}")
+    print(f"JSON exists: {os.path.exists(json_path)}")
+    
     if open_browser:
         try:
             webbrowser.open(os.path.abspath(html_path))
@@ -1674,9 +1682,9 @@ def save_outputs(
             pass
 
     return {
-        "html_path": html_path,
-        "json_path": json_path,
-    }
+    "html_path": f"outputs/{html_filename}",
+    "json_path": f"outputs/{json_filename}",
+}
 
 
 # =========================
