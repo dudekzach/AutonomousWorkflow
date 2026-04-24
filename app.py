@@ -31,13 +31,15 @@ app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 # Set back to False once you've finished diagnosing the 502 issue.
 FORCE_OPTIMIZER_OFF = True
 
+REDIS_URL = os.getenv("REDIS_URL")
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+
 # Redis setup
 REDIS_URL = os.getenv("REDIS_URL")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 # Temporary in-memory job store
 # Later this can be replaced with Redis
-jobs: Dict[str, Dict[str, Any]] = {}
 
 
 class RunRequest(BaseModel):
@@ -51,6 +53,21 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def get_job_key(job_id: str) -> str:
+    return f"job:{job_id}"
+
+
+def save_job(job_id: str, job_data: Dict[str, Any]) -> None:
+    redis_client.set(get_job_key(job_id), json.dumps(job_data))
+
+
+def get_job(job_id: str) -> Optional[Dict[str, Any]]:
+    raw = redis_client.get(get_job_key(job_id))
+    if not raw:
+        return None
+    return json.loads(raw)
+
+
 def create_job(
     prompt: str,
     max_iterations: int = 3,
@@ -59,7 +76,7 @@ def create_job(
 ) -> str:
     job_id = str(uuid.uuid4())
 
-    jobs[job_id] = {
+    job_data = {
         "job_id": job_id,
         "status": "queued",
         "stage": "queued",
@@ -100,11 +117,12 @@ def create_job(
         "error": None,
     }
 
+    save_job(job_id, job_data)
     return job_id
 
 
 def update_job(job_id: str, **fields: Any) -> None:
-    job = jobs.get(job_id)
+    job = get_job(job_id)
     if not job:
         return
 
@@ -112,6 +130,7 @@ def update_job(job_id: str, **fields: Any) -> None:
         job[key] = value
 
     job["updated_at"] = now_iso()
+    save_job(job_id, job)
 
 
 def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -126,9 +145,9 @@ def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, 
 
 
 def process_job(job_id: str) -> None:
-    job = jobs.get(job_id)
+    job = get_job(job_id)
     if not job:
-        print(f"PROCESS_JOB: job_id={job_id} not found")
+        print(f"PROCESS_JOB: job_id={job_id} not found", flush=True)
         return
 
     request_data = job["request"]
@@ -138,16 +157,16 @@ def process_job(job_id: str) -> None:
     options = request_data["options"]
 
     start_time = time.time()
-    print(f"PROCESS_JOB: started job_id={job_id}")
+    print(f"PROCESS_JOB: started job_id={job_id}", flush=True)
 
     try:
         update_job(job_id, status="running", stage="starting")
 
         prompt_length = len(prompt) if prompt else 0
-        print(f"PROCESS_JOB: prompt length={prompt_length}")
-        print(f"PROCESS_JOB: max_iterations={max_iterations}")
-        print(f"PROCESS_JOB: user_id={user_id}")
-        print(f"PROCESS_JOB: options={options}")
+        print(f"PROCESS_JOB: prompt length={prompt_length}", flush=True)
+        print(f"PROCESS_JOB: max_iterations={max_iterations}", flush=True)
+        print(f"PROCESS_JOB: user_id={user_id}", flush=True)
+        print(f"PROCESS_JOB: options={options}", flush=True)
 
         update_job(job_id, stage="running_runner")
 
@@ -160,9 +179,14 @@ def process_job(job_id: str) -> None:
 
         elapsed = time.time() - start_time
 
-        jobs[job_id]["runner_result"] = result
+        job = get_job(job_id)
+        if not job:
+            print(f"PROCESS_JOB: job disappeared job_id={job_id}", flush=True)
+            return
 
-        jobs[job_id]["final_output"] = (
+        job["runner_result"] = result
+
+        job["final_output"] = (
             result.get("final_output")
             or result.get("full_output")
             or result.get("output")
@@ -181,40 +205,46 @@ def process_job(job_id: str) -> None:
                 artifact_path = artifact.get("path")
 
                 if artifact_type == "html":
-                    jobs[job_id]["artifacts"]["html_path"] = artifact_path
+                    job["artifacts"]["html_path"] = artifact_path
                 elif artifact_type == "json":
-                    jobs[job_id]["artifacts"]["json_path"] = artifact_path
+                    job["artifacts"]["json_path"] = artifact_path
 
         print(f"PROCESS_JOB: BASE_DIR={BASE_DIR}", flush=True)
         print(f"PROCESS_JOB: OUTPUTS_DIR={OUTPUTS_DIR}", flush=True)
         print(
-            f"PROCESS_JOB: extracted html_path={jobs[job_id]['artifacts']['html_path']}",
+            f"PROCESS_JOB: extracted html_path={job['artifacts']['html_path']}",
             flush=True,
         )
         print(
-            f"PROCESS_JOB: extracted json_path={jobs[job_id]['artifacts']['json_path']}",
+            f"PROCESS_JOB: extracted json_path={job['artifacts']['json_path']}",
             flush=True,
         )
 
-        jobs[job_id]["status"] = result.get("status", "completed")
-        jobs[job_id]["stage"] = "done"
-        jobs[job_id]["updated_at"] = now_iso()
+        job["status"] = result.get("status", "completed")
+        job["stage"] = "done"
+        job["updated_at"] = now_iso()
+
+        save_job(job_id, job)
 
         print(
             f"PROCESS_JOB: completed job_id={job_id} "
-            f"status={jobs[job_id]['status']} in {elapsed:.2f}s"
+            f"status={job['status']} in {elapsed:.2f}s",
+            flush=True,
         )
 
     except Exception as e:
         elapsed = time.time() - start_time
-        print(f"PROCESS_JOB ERROR: job_id={job_id} failed after {elapsed:.2f}s")
-        print(f"PROCESS_JOB ERROR: {type(e).__name__}: {e}")
+        print(f"PROCESS_JOB ERROR: job_id={job_id} failed after {elapsed:.2f}s", flush=True)
+        print(f"PROCESS_JOB ERROR: {type(e).__name__}: {e}", flush=True)
         traceback.print_exc()
 
-        jobs[job_id]["status"] = "failed"
-        jobs[job_id]["stage"] = "failed"
-        jobs[job_id]["error"] = str(e)
-        jobs[job_id]["updated_at"] = now_iso()
+        job = get_job(job_id)
+        if job:
+            job["status"] = "failed"
+            job["stage"] = "failed"
+            job["error"] = str(e)
+            job["updated_at"] = now_iso()
+            save_job(job_id, job)
 
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
@@ -230,10 +260,8 @@ def health_check() -> Dict[str, str]:
 @app.get("/status/{job_id}")
 def get_status(job_id: str) -> Dict[str, Any]:
     print(f"API: /status called for job_id={job_id} pid={os.getpid()}", flush=True)
-    print(f"API: /status jobs_count={len(jobs)}", flush=True)
-    print(f"API: /status current_job_ids={list(jobs.keys())}", flush=True)
 
-    job = jobs.get(job_id)
+    job = get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
@@ -242,7 +270,6 @@ def get_status(job_id: str) -> Dict[str, Any]:
 @app.post("/run")
 def run_workflow(request: RunRequest):
     print(f"API: /run called pid={os.getpid()}", flush=True)
-    print(f"API: /run jobs_before={len(jobs)}", flush=True)
 
     try:
         prompt_length = len(request.prompt) if request.prompt else 0
@@ -261,8 +288,6 @@ def run_workflow(request: RunRequest):
         )
 
         print(f"API: /run created job_id={job_id} pid={os.getpid()}", flush=True)
-        print(f"API: /run jobs_after={len(jobs)}", flush=True)
-        print(f"API: /run current_job_ids={list(jobs.keys())}", flush=True)
 
         thread = threading.Thread(
             target=process_job,
