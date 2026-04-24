@@ -5,6 +5,7 @@ import time
 import traceback
 import uuid
 import threading
+import os
 
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -222,6 +223,10 @@ def health_check() -> Dict[str, str]:
 
 @app.get("/status/{job_id}")
 def get_status(job_id: str) -> Dict[str, Any]:
+    print(f"API: /status called for job_id={job_id} pid={os.getpid()}", flush=True)
+    print(f"API: /status jobs_count={len(jobs)}", flush=True)
+    print(f"API: /status current_job_ids={list(jobs.keys())}", flush=True)
+
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -230,16 +235,17 @@ def get_status(job_id: str) -> Dict[str, Any]:
 
 @app.post("/run")
 def run_workflow(request: RunRequest):
-    print("API: /run called")
+    print(f"API: /run called pid={os.getpid()}", flush=True)
+    print(f"API: /run jobs_before={len(jobs)}", flush=True)
 
     try:
         prompt_length = len(request.prompt) if request.prompt else 0
-        print(f"API: /run prompt length={prompt_length}")
-        print(f"API: /run max_iterations={request.max_iterations}")
-        print(f"API: /run user_id={request.user_id}")
+        print(f"API: /run prompt length={prompt_length}", flush=True)
+        print(f"API: /run max_iterations={request.max_iterations}", flush=True)
+        print(f"API: /run user_id={request.user_id}", flush=True)
 
         options = build_runner_options(request.options)
-        print(f"API: /run options={options}")
+        print(f"API: /run options={options}", flush=True)
 
         job_id = create_job(
             prompt=request.prompt,
@@ -248,7 +254,9 @@ def run_workflow(request: RunRequest):
             options=options,
         )
 
-        print(f"API: /run created job_id={job_id}")
+        print(f"API: /run created job_id={job_id} pid={os.getpid()}", flush=True)
+        print(f"API: /run jobs_after={len(jobs)}", flush=True)
+        print(f"API: /run current_job_ids={list(jobs.keys())}", flush=True)
 
         thread = threading.Thread(
             target=process_job,
@@ -257,7 +265,7 @@ def run_workflow(request: RunRequest):
         )
         thread.start()
 
-        print(f"API: /run background thread started for job_id={job_id}")
+        print(f"API: /run background thread started for job_id={job_id}", flush=True)
 
         return {
             "job_id": job_id,
@@ -266,8 +274,8 @@ def run_workflow(request: RunRequest):
         }
 
     except Exception as e:
-        print("API ERROR: /run failed before job start")
-        print(f"API ERROR: {type(e).__name__}: {e}")
+        print("API ERROR: /run failed before job start", flush=True)
+        print(f"API ERROR: {type(e).__name__}: {e}", flush=True)
         traceback.print_exc()
 
         return JSONResponse(
