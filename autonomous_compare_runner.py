@@ -37,6 +37,7 @@ MAX_CONTINUATION_ATTEMPTS = int(os.getenv("MAX_CONTINUATION_ATTEMPTS", "3"))
 ENABLE_OPTIMIZER_BY_DEFAULT = os.getenv("ENABLE_OPTIMIZER", "true").lower() == "true"
 ENABLE_STITCHING_BY_DEFAULT = os.getenv("ENABLE_STITCHING", "true").lower() == "true"
 LOG_TO_STDOUT = os.getenv("LOG_TO_STDOUT", "true").lower() == "true"
+FORCE_DISABLE_OPTIMIZER = True
 
 
 # =========================
@@ -90,7 +91,7 @@ class PromptOptimizationResult:
     original_prompt: str
     optimized_prompt: str
     annotated_explanation: str
-    optional_variants: List[str]
+    optional_variants: List[Any]
     provider: str
     strategy: str
     target_model: Optional[str] = None
@@ -857,7 +858,7 @@ def optimize_prompt(
 ) -> PromptOptimizationResult:
     options = options or {}
 
-    optimize_enabled = options.get("optimize_prompt", ENABLE_OPTIMIZER_BY_DEFAULT)
+    optimize_enabled = False if FORCE_DISABLE_OPTIMIZER else options.get("optimize_prompt", ENABLE_OPTIMIZER_BY_DEFAULT)
     strategy = options.get("optimizer_strategy", "compare_both")
     target_model = options.get("optimizer_target_model")
     use_case = options.get("optimizer_use_case")
@@ -1260,6 +1261,20 @@ def esc(text: Optional[Any]) -> str:
     return html.escape(str(text))
 
 
+def render_optional_variants(optional_variants: Optional[List[Any]]) -> str:
+    if not optional_variants:
+        return "N/A"
+
+    rendered_items: List[str] = []
+    for item in optional_variants:
+        if isinstance(item, str):
+            rendered_items.append(item)
+        else:
+            rendered_items.append(json.dumps(item, indent=2, ensure_ascii=False))
+
+    return "\n\n".join(rendered_items)
+    
+
 def score_total(score: ScoreCard) -> int:
     return (
         score.clarity
@@ -1395,7 +1410,7 @@ def build_html(records: List[IterationRecord], initial_prompt: str) -> str:
                 <strong>What Changed and Why</strong>
                 <pre>{esc(record.prompt_optimization.annotated_explanation)}</pre>
                 <strong>Optional Variants</strong>
-                <pre>{esc('\n\n'.join(record.prompt_optimization.optional_variants) if record.prompt_optimization.optional_variants else 'N/A')}</pre>
+                <pre>{esc(render_optional_variants(record.prompt_optimization.optional_variants))}</pre>
                 <strong>Optimizer Selection Reason</strong>
                 <pre>{esc(record.prompt_optimization.selection_reason or 'N/A')}</pre>
             </div>
