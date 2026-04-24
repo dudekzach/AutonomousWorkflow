@@ -158,21 +158,27 @@ def process_job(job_id: str) -> None:
 
         # Best-effort extraction of top-level result fields
         jobs[job_id]["final_output"] = (
-            result.get("final_output")
-            or result.get("output")
-            or result.get("response")
-            or result.get("best_response")
-        )
+        result.get("final_output")
+        or result.get("full_output")
+        or result.get("output")
+        or result.get("response")
+        or result.get("best_response")
+)
 
-        artifact_paths = result.get("artifacts", {}) if isinstance(result.get("artifacts"), dict) else {}
-        jobs[job_id]["artifacts"]["html_path"] = (
-            artifact_paths.get("html")
-            or result.get("html_path")
-        )
-        jobs[job_id]["artifacts"]["json_path"] = (
-            artifact_paths.get("json")
-            or result.get("json_path")
-        )
+artifacts = result.get("artifacts", [])
+
+if isinstance(artifacts, list):
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            continue
+
+        artifact_type = artifact.get("type")
+        artifact_path = artifact.get("path")
+
+        if artifact_type == "html":
+            jobs[job_id]["artifacts"]["html_path"] = artifact_path
+        elif artifact_type == "json":
+            jobs[job_id]["artifacts"]["json_path"] = artifact_path
 
         jobs[job_id]["status"] = result.get("status", "completed")
         jobs[job_id]["stage"] = "done"
