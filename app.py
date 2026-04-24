@@ -6,6 +6,8 @@ import traceback
 import uuid
 import threading
 import os
+import json
+import redis
 
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -28,6 +30,10 @@ app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 # Set to True to force optimizer off for all API calls.
 # Set back to False once you've finished diagnosing the 502 issue.
 FORCE_OPTIMIZER_OFF = True
+
+# Redis setup
+REDIS_URL = os.getenv("REDIS_URL")
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 # Temporary in-memory job store
 # Later this can be replaced with Redis
