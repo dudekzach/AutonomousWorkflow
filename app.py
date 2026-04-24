@@ -158,14 +158,14 @@ def process_job(job_id: str) -> None:
 
         # Best-effort extraction of top-level result fields
         jobs[job_id]["final_output"] = (
-        result.get("final_output")
-        or result.get("full_output")
-        or result.get("output")
-        or result.get("response")
-        or result.get("best_response")
-)
+            result.get("final_output")
+            or result.get("full_output")
+            or result.get("output")
+            or result.get("response")
+            or result.get("best_response")
+        )
 
-artifacts = result.get("artifacts", [])
+        artifacts = result.get("artifacts", [])
 
 if isinstance(artifacts, list):
     for artifact in artifacts:
