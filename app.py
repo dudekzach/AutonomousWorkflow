@@ -167,7 +167,7 @@ def process_job(job_id: str) -> None:
 
         artifacts = result.get("artifacts", [])
 
-if isinstance(artifacts, list):
+    if isinstance(artifacts, list):
     for artifact in artifacts:
         if not isinstance(artifact, dict):
             continue
