@@ -1,1 +1,152 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autonomous Workflow Architecture v2</title>
+  <style>
+    :root {
+      --bg: #f5f7fa; --card: #ffffff; --ink: #172033; --muted: #5f6b7a;
+      --line: #d9e0e7; --accent: #2563eb; --shadow: 0 10px 24px rgba(0,0,0,0.08); --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: Arial, Helvetica, sans-serif; line-height: 1.4; }
+    .wrap { max-width: 1360px; margin: 0 auto; padding: 28px 24px 56px; }
+    .hero { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 20px; margin-bottom: 24px; }
+    .hero-card, .summary-card, .layer, .value-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .hero-card { padding: 26px 28px; }
+    .hero-card h1 { margin: 0 0 10px; font-size: 44px; line-height: 1.05; }
+    .hero-card p { margin: 0; color: var(--muted); font-size: 18px; }
+    .summary-card { padding: 22px 24px; display: flex; flex-direction: column; justify-content: space-between; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; font-size: 13px; background: #fafbfc; }
+    .architecture { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; align-items: start; }
+    .layer { padding: 18px; min-height: 760px; position: relative; }
+    .layer h2 { margin: 0 0 8px; font-size: 20px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+    .block { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; background: #fbfcfe; }
+    .block h3 { margin: 0 0 6px; font-size: 16px; }
+    .block p { margin: 0; color: var(--muted); font-size: 14px; }
+    .mini-list { margin: 8px 0 0 18px; color: var(--muted); font-size: 14px; }
+    .connector { position: absolute; top: 50%; right: -12px; width: 24px; height: 24px; border-radius: 999px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: var(--shadow); }
+    .layer:last-child .connector { display: none; }
+    .layer-1 { border-top: 6px solid #2563eb; } .layer-2 { border-top: 6px solid #7c3aed; } .layer-3 { border-top: 6px solid #0891b2; } .layer-4 { border-top: 6px solid #16a34a; } .layer-5 { border-top: 6px solid #d97706; } .layer-6 { border-top: 6px solid #dc2626; }
+    .foot { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .value-card { padding: 20px 22px; }
+    .value-card h3 { margin: 0 0 12px; font-size: 22px; }
+    .value-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .value { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: #fbfcfe; }
+    .value strong { display: block; margin-bottom: 6px; }
+    .note { color: var(--muted); font-size: 13px; margin-top: 12px; }
+    code { background: #eef2ff; padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+    @media (max-width: 1200px) { .architecture { grid-template-columns: repeat(3, 1fr); } .layer { min-height: auto; } .connector { display: none; } }
+    @media (max-width: 860px) { .hero, .foot, .architecture { grid-template-columns: 1fr; } .hero-card h1 { font-size: 34px; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-card">
+        <h1>Autonomous Workflow Architecture v2</h1>
+        <p>Hosted multi-model orchestration system with prompt optimization, file attachment ingestion, model comparison, judge-driven follow-up, stitching, and downloadable artifacts.</p>
+        <div class="pill-row">
+          <div class="pill">Hosted on Render</div><div class="pill">FastAPI backend</div><div class="pill">Custom HTML UI</div><div class="pill">OpenAI + Claude</div><div class="pill">Public artifact links</div><div class="pill">Prompt optimizer</div>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div>
+          <h2 style="margin:0 0 8px;">Current Vision</h2>
+          <p style="margin:0;color:var(--muted);">Turn prompt-driven consulting work into a reusable internal tool that accepts user input, optional source files, improves the prompt automatically, compares model outputs, and returns a polished recommendation with traceable artifacts.</p>
+        </div>
+        <div class="pill-row">
+          <div class="pill">Pilot-ready</div><div class="pill">1+ teammate shareable</div><div class="pill">Extensible architecture</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="architecture">
+      <div class="layer layer-1">
+        <h2>Layer 1 — User Experience</h2>
+        <div class="sub">Hosted UI used by solution consultants and internal teammates</div>
+        <div class="block"><h3>Web UI</h3><p>Users open a public Render URL and interact through a custom HTML interface instead of a terminal.</p></div>
+        <div class="block"><h3>Prompt Input</h3><p>Users enter a goal-oriented prompt with context, audience, tone, and output expectations.</p></div>
+        <div class="block"><h3>Optional File Attachments</h3><p>Users can upload supporting files such as notes, transcripts, drafts, or exported text-based artifacts.</p></div>
+        <div class="block"><h3>Run Controls</h3><p>Current UX supports core execution. Near-term controls can expose optimizer strategy, target model, tone, and format preferences.</p></div>
+        <div class="connector">→</div>
+      </div>
+
+      <div class="layer layer-2">
+        <h2>Layer 2 — API & App Layer</h2>
+        <div class="sub">FastAPI service hosted on Render</div>
+        <div class="block"><h3>FastAPI Routes</h3><p><code>/</code> serves the UI, <code>/run</code> handles normal execution, <code>/run-with-files</code> accepts multipart form uploads, and <code>/outputs</code> serves generated artifacts.</p></div>
+        <div class="block"><h3>Request Packaging</h3><p>Prompt, user context, iteration count, options, and uploaded file content are normalized into a single execution payload.</p></div>
+        <div class="block"><h3>Deployment & Sharing</h3><p>Render provides a stable public URL so the workflow can be shared without exposing a local laptop.</p></div>
+        <div class="block"><h3>Secrets Management</h3><p>API keys are stored as environment variables in the host environment instead of the repository.</p></div>
+        <div class="connector">→</div>
+      </div>
+
+      <div class="layer layer-3">
+        <h2>Layer 3 — Prompt Engineering Layer</h2>
+        <div class="sub">New intelligence before model execution</div>
+        <div class="block"><h3>Prompt Optimizer</h3><p>Before main execution, the user prompt is refined for clarity, specificity, structure, efficiency, and creativity control.</p>
+          <ul class="mini-list"><li>Produces optimized prompt</li><li>Can compare optimizer candidates</li><li>Can store optimizer rationale / metadata</li></ul>
+        </div>
+        <div class="block"><h3>Attachment Context Injection</h3><p>Uploaded file contents are appended into a structured prompt context block so downstream models can use supporting material.</p></div>
+        <div class="block"><h3>Normalized Active Prompt</h3><p>The optimized prompt becomes the actual prompt sent to the execution models.</p></div>
+        <div class="connector">→</div>
+      </div>
+
+      <div class="layer layer-4">
+        <h2>Layer 4 — Model Execution Layer</h2>
+        <div class="sub">Parallel answer generation across multiple providers</div>
+        <div class="block"><h3>OpenAI Path</h3><p>Sends the optimized prompt to the OpenAI API and captures a first-pass response plus response state for follow-ups.</p></div>
+        <div class="block"><h3>Claude Path</h3><p>Sends the same optimized prompt to Anthropic and captures a first-pass response plus conversation state for follow-ups.</p></div>
+        <div class="block"><h3>Same Prompt, Independent Reasoning</h3><p>The architecture intentionally compares how different frontier models solve the same business problem.</p></div>
+        <div class="connector">→</div>
+      </div>
+
+      <div class="layer layer-5">
+        <h2>Layer 5 — Evaluation & Orchestration</h2>
+        <div class="sub">Decisioning turns raw outputs into a guided workflow</div>
+        <div class="block"><h3>Judge Layer</h3><p>A judge model scores both outputs on clarity, completeness, tone, practical usefulness, and overall strength.</p></div>
+        <div class="block"><h3>Autonomous Next Action</h3><p>The system decides whether to accept, revise and rerun, or follow up on the stronger response.</p></div>
+        <div class="block"><h3>Continuation Handling</h3><p>If a winning answer is cut off, the workflow triggers continuation prompts until the answer is sufficiently complete.</p></div>
+        <div class="block"><h3>Stitching Step</h3><p>When needed, original and continuation outputs are merged into one polished final answer instead of exposing a broken draft plus patch.</p></div>
+        <div class="connector">→</div>
+      </div>
+
+      <div class="layer layer-6">
+        <h2>Layer 6 — Output & Business Value</h2>
+        <div class="sub">What the user sees and what the business gains</div>
+        <div class="block"><h3>UI Result Panel</h3><p>Displays status, runtime, summary, final output, logs, and generated artifact links.</p></div>
+        <div class="block"><h3>Artifacts</h3><p>Each run generates structured JSON and an HTML report for review, sharing, and replayability.</p></div>
+        <div class="block"><h3>Traceability</h3><p>Artifacts preserve prompt, optimized prompt, model outputs, judge reasoning, and final recommendation.</p></div>
+        <div class="block"><h3>Reusable Internal Tooling</h3><p>This creates a foundation for repeatable demo prep, defense strategy generation, evaluation workflows, and future agentic automation.</p></div>
+      </div>
+    </section>
+
+    <section class="foot">
+      <div class="value-card">
+        <h3>Why this is materially different from v1</h3>
+        <div class="value-grid">
+          <div class="value"><strong>From local to hosted</strong><span>Moved from terminal-only execution on one machine to a publicly reachable, hosted application.</span></div>
+          <div class="value"><strong>From raw prompt to optimized prompt</strong><span>Introduced a pre-processing layer that improves input quality before model comparison even begins.</span></div>
+          <div class="value"><strong>From prompt-only to context-rich</strong><span>Users can now bring supporting files into the workflow to ground outputs in real materials.</span></div>
+          <div class="value"><strong>From side-by-side compare to guided orchestration</strong><span>The judge can now direct follow-up actions and stitched finalization for cleaner outcomes.</span></div>
+        </div>
+      </div>
+      <div class="value-card">
+        <h3>Business value for internal sharing</h3>
+        <div class="value-grid">
+          <div class="value"><strong>Faster prep</strong><span>Accelerates competitive positioning, objections, scripts, and executive summaries.</span></div>
+          <div class="value"><strong>Better consistency</strong><span>Prompts can be optimized and reused instead of reinvented manually each time.</span></div>
+          <div class="value"><strong>Higher trust</strong><span>Artifacts make reasoning visible instead of hiding everything in a chat transcript.</span></div>
+          <div class="value"><strong>Scalable foundation</strong><span>Architecture is already aligned with future controls, knowledge integrations, and team workflows.</span></div>
+        </div>
+        <div class="note">Suggested use: share this visual as the current-state architecture of the hosted autonomous workflow, then use it to explain near-term roadmap items such as richer file parsing, optimizer controls, access control, and persistent history.</div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
