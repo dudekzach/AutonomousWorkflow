@@ -132,6 +132,23 @@ def update_job(job_id: str, **fields: Any) -> None:
     job["updated_at"] = now_iso()
     save_job(job_id, job)
 
+def update_job_results(job_id: str, section: str, **fields: Any) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+
+    if "results" not in job:
+        job["results"] = {}
+
+    if section not in job["results"]:
+        job["results"][section] = {}
+
+    for key, value in fields.items():
+        job["results"][section][key] = value
+
+    job["updated_at"] = now_iso()
+    save_job(job_id, job)
+    
 
 def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     merged_options: Dict[str, Any] = dict(options or {})
@@ -168,7 +185,7 @@ def process_job(job_id: str) -> None:
         print(f"PROCESS_JOB: user_id={user_id}", flush=True)
         print(f"PROCESS_JOB: options={options}", flush=True)
 
-        update_job(job_id, stage="running_runner")
+        update_job(job_id, stage="calling_models")
 
         result = run_autonomous_compare(
             prompt=prompt,
@@ -185,6 +202,24 @@ def process_job(job_id: str) -> None:
             return
 
         job["runner_result"] = result
+        
+        logs = result.get("logs", [])
+        runtime = result.get("runtime_seconds")
+
+        # Track model completion
+        for line in logs:
+            if "DONE iteration_1_openai_initial" in line:
+                update_job_results(job_id, "openai", status="completed")
+            if "DONE iteration_1_claude_initial" in line:
+                update_job_results(job_id, "claude", status="completed")
+            if "START iteration_1_judge" in line:
+                update_job(job_id, stage="judging")
+            if "DONE iteration_1_judge" in line:
+                update_job_results(job_id, "judge", status="completed")
+
+        # Optional: track runtime
+        if runtime:
+            job["runtime_seconds"] = runtime
 
         job["final_output"] = (
             result.get("final_output")
