@@ -1023,37 +1023,38 @@ def run_autonomous_loop(
     for iteration in range(1, max_iterations + 1):
         add_log(logs, f"Iteration {iteration} started")
 
-with ThreadPoolExecutor(max_workers=2) as executor:
-    futures = {
-        executor.submit(
-            run_step,
-            f"iteration_{iteration}_openai_initial",
-            lambda: call_openai_new_chat(active_prompt),
-            logs,
-        ): "openai",
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {
+                executor.submit(
+                    run_step,
+                    f"iteration_{iteration}_openai_initial",
+                    lambda: call_openai_new_chat(active_prompt),
+                    logs,
+                ): "openai",
+                executor.submit(
+                    run_step,
+                    f"iteration_{iteration}_claude_initial",
+                    lambda: call_claude_new_chat(claude_state, active_prompt),
+                    logs,
+                ): "claude",
+            }
 
-        executor.submit(
-            run_step,
-            f"iteration_{iteration}_claude_initial",
-            lambda: call_claude_new_chat(claude_state, active_prompt),
-            logs,
-        ): "claude",
-    }
+            openai_result: Optional[ProviderResult] = None
+            claude_result: Optional[ProviderResult] = None
 
-    openai_result = None
-    claude_result = None
+            for future in as_completed(futures):
+                model = futures[future]
+                result = future.result()
 
-    for future in as_completed(futures):
-        model = futures[future]
-        result = future.result()
+                if model == "openai":
+                    openai_result = result
+                    if openai_result.response_id:
+                        openai_state.last_response_id = openai_result.response_id
+                elif model == "claude":
+                    claude_result = result
 
-        if model == "openai":
-            openai_result = result
-            if openai_result.response_id:
-                openai_state.last_response_id = openai_result.response_id
-
-        elif model == "claude":
-            claude_result = result
+        if openai_result is None or claude_result is None:
+            raise RuntimeError("Parallel model execution did not return both provider results")
 
         judge = run_step(
             f"iteration_{iteration}_judge",
