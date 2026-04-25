@@ -150,6 +150,17 @@ def update_job_results(job_id: str, section: str, **fields: Any) -> None:
     save_job(job_id, job)
     
 
+def set_result_section(job: Dict[str, Any], section: str, **fields: Any) -> None:
+    if "results" not in job:
+        job["results"] = {}
+
+    if section not in job["results"]:
+        job["results"][section] = {}
+
+    for key, value in fields.items():
+        job["results"][section][key] = value
+    
+
 def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     merged_options: Dict[str, Any] = dict(options or {})
 
@@ -206,18 +217,16 @@ def process_job(job_id: str) -> None:
         logs = result.get("logs", [])
         runtime = result.get("runtime_seconds")
 
-        # Track model completion
         for line in logs:
             if "DONE iteration_1_openai_initial" in line:
-                update_job_results(job_id, "openai", status="completed")
+                set_result_section(job, "openai", status="completed")
             if "DONE iteration_1_claude_initial" in line:
-                update_job_results(job_id, "claude", status="completed")
+                set_result_section(job, "claude", status="completed")
             if "START iteration_1_judge" in line:
-                update_job(job_id, stage="judging")
+                job["stage"] = "judging"
             if "DONE iteration_1_judge" in line:
-                update_job_results(job_id, "judge", status="completed")
+                set_result_section(job, "judge", status="completed")
 
-        # Optional: track runtime
         if runtime:
             job["runtime_seconds"] = runtime
 
@@ -256,7 +265,7 @@ def process_job(job_id: str) -> None:
         )
 
         job["status"] = result.get("status", "completed")
-        job["stage"] = "done"
+        job["stage"] = "completed"
         job["updated_at"] = now_iso()
 
         save_job(job_id, job)
