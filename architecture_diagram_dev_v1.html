@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Model AI Workflow — Process Flow & Roadmap</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --teal-50: #E1F5EE; --teal-200: #5DCAA5; --teal-600: #0F6E56; --teal-800: #085041; --teal-900: #04342C;
+    --amber-50: #FAEEDA; --amber-200: #EF9F27; --amber-600: #854F0B; --amber-800: #633806; --amber-900: #412402;
+    --gray-50: #F1EFE8; --gray-200: #B4B2A9; --gray-600: #5F5E5A; --gray-800: #444441;
+    --bg: #F7F6F2;
+    --text: #1a1a18;
+    --text-muted: #6b6a65;
+    --border: rgba(0,0,0,0.1);
+    --radius: 10px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 48px 32px;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 40px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .subtitle {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--text-muted);
+    max-width: 520px;
+    line-height: 1.6;
+  }
+
+  /* ─── Legend ─── */
+  .legend {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    margin-bottom: 36px;
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: fit-content;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 14px; height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .dot-teal  { background: var(--teal-200);  border: 1.5px solid var(--teal-600); }
+  .dot-amber { background: var(--amber-200); border: 1.5px solid var(--amber-600); }
+
+  /* ─── Section headings ─── */
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── Flow layout ─── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 48px;
+  }
+
+  .step {
+    width: 100%;
+    max-width: 480px;
+    background: var(--teal-50);
+    border: 1.5px solid var(--teal-600);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    position: relative;
+  }
+
+  .step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--teal-800);
+    line-height: 1.3;
+  }
+
+  .step-sub {
+    font-size: 12px;
+    color: var(--teal-600);
+    margin-top: 3px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .arrow-down {
+    width: 2px;
+    height: 24px;
+    background: var(--teal-600);
+    position: relative;
+    margin: 0 auto;
+  }
+  .arrow-down::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--teal-600);
+  }
+
+  /* ─── Fork row ─── */
+  .fork-row {
+    display: flex;
+    width: 100%;
+    max-width: 640px;
+    gap: 20px;
+    align-items: flex-start;
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .fork-row .step {
+    flex: 1;
+    max-width: none;
+  }
+
+  .fork-connector {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+    height: 32px;
+  }
+
+  .fork-connector svg {
+    width: 100%;
+    height: 32px;
+  }
+
+  /* ─── Roadmap grid ─── */
+  .roadmap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .roadmap-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 48px;
+  }
+
+  .roadmap-card {
+    background: var(--amber-50);
+    border: 1.5px solid var(--amber-600);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+
+  .roadmap-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--amber-800);
+    line-height: 1.3;
+  }
+
+  .roadmap-sub {
+    font-size: 11.5px;
+    color: var(--amber-600);
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ─── Components strip ─── */
+  .components {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 48px;
+  }
+
+  .component-chip {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--gray-800);
+  }
+
+  .component-chip.lib {
+    background: var(--gray-50);
+    color: var(--gray-600);
+    font-size: 11px;
+  }
+
+  /* ─── Footer ─── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media (max-width: 600px) {
+    .roadmap-grid { grid-template-columns: 1fr 1fr; }
+    .fork-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">AI Workflow Documentation</p>
+    <h1>Multi-Model AI Workflow</h1>
+    <p class="subtitle">A Python-based tool that sends a single prompt to multiple AI models (OpenAI GPT + Anthropic Claude) and returns side-by-side responses with an automated recommendation layer.</p>
+  </header>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot dot-teal"></div> Currently available</div>
+    <div class="legend-item"><div class="legend-dot dot-amber"></div> Roadmap / next steps</div>
+  </div>
+
+  <!-- ── Process Flow ── -->
+  <p class="section-label">High-level process flow</p>
+  <div class="flow">
+
+    <div class="step" style="max-width:480px">
+      <div class="step-title">1. User inputs prompt</div>
+      <div class="step-sub">VS Code terminal — command line</div>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <div class="step" style="max-width:480px">
+      <div class="step-title">2. Python script processes request</div>
+      <div class="step-sub">Core orchestration layer</div>
+    </div>
+
+    <!-- Fork connector (SVG lines) -->
+    <div class="fork-connector" style="max-width:640px;width:100%">
+      <svg viewBox="0 0 640 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="320" y1="0" x2="160" y2="32" stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="320" y1="0" x2="480" y2="32" stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arr)"/>
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <!-- Parallel API row -->
+    <div class="fork-row" style="max-width:640px">
+      <div class="step">
+        <div class="step-title">3a. OpenAI API</div>
+        <div class="step-sub">GPT model call</div>
+      </div>
+      <div class="step">
+        <div class="step-title">3b. Anthropic API</div>
+        <div class="step-sub">Claude model call</div>
+      </div>
+    </div>
+
+    <!-- Merge connector -->
+    <div class="fork-connector" style="max-width:640px;width:100%">
+      <svg viewBox="0 0 640 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="160" y1="0" x2="320" y2="32" stroke="#0F6E56" stroke-width="1.5"/>
+        <line x1="480" y1="0" x2="320" y2="32" stroke="#0F6E56" stroke-width="1.5"/>
+        <circle cx="320" cy="32" r="3.5" fill="#0F6E56"/>
+      </svg>
+    </div>
+
+    <div class="step" style="max-width:480px">
+      <div class="step-title">4. Responses returned &amp; stored</div>
+      <div class="step-sub">Both outputs captured in memory</div>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <div class="step" style="max-width:480px">
+      <div class="step-title">5. Secondary evaluation prompt</div>
+      <div class="step-sub">Auto-compares both model outputs</div>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <div class="step" style="max-width:480px">
+      <div class="step-title">6. HTML report generated</div>
+      <div class="step-sub">Side-by-side comparison + model recommendation</div>
+    </div>
+
+  </div>
+
+  <!-- ── Roadmap ── -->
+  <p class="section-label">Roadmap — next steps</p>
+  <div class="roadmap-grid">
+    <div class="roadmap-card">
+      <div class="roadmap-title">Scoring framework</div>
+      <div class="roadmap-sub">1–5 ratings per category</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">Expand model roster</div>
+      <div class="roadmap-sub">Add Gemini, Mistral, etc.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">UI / internal tool</div>
+      <div class="roadmap-sub">Embed in web interface</div>
+    </div>
+  </div>
+  <div class="roadmap-grid-2">
+    <div class="roadmap-card">
+      <div class="roadmap-title">Results storage &amp; trend analysis</div>
+      <div class="roadmap-sub">Track outputs over time</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">Customer use case alignment</div>
+      <div class="roadmap-sub">Tailor outputs per scenario</div>
+    </div>
+  </div>
+
+  <!-- ── Core Components ── -->
+  <p class="section-label">Core components</p>
+  <div class="components">
+    <span class="component-chip">VS Code</span>
+    <span class="component-chip">Python</span>
+    <span class="component-chip">OpenAI API</span>
+    <span class="component-chip">Anthropic API</span>
+    <span class="component-chip">.env / API keys</span>
+    <span class="component-chip lib">openai</span>
+    <span class="component-chip lib">anthropic</span>
+    <span class="component-chip lib">python-dotenv</span>
+    <span class="component-chip lib">truststore</span>
+  </div>
+
+  <footer>
+    <span>Multi-Model AI Workflow Overview</span>
+    <span>Generated · 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>
