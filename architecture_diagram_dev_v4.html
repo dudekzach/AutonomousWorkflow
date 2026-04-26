@@ -6,25 +6,27 @@
   <title>Zach Dudek's Autonomous Workflow Orchestration Architecture</title>
   <style>
     :root{
-      --bg:#eef3f8;
-      --bg-2:#dfe8f1;
+      --bg:#edf2f7;
+      --bg-2:#dfe7f0;
       --panel:#ffffff;
-      --panel-2:#f6f9fc;
-      --card:#16233d;
-      --card-2:#1d2d4d;
-      --text:#10233b;
-      --text-inverse:#edf4ff;
-      --muted:#52657d;
-      --muted-inverse:#aebdd4;
-      --line:#d6e0eb;
-      --line-strong:#c5d3e2;
-      --accent:#2f6fed;
-      --accent-2:#5f8fff;
-      --good:#17b897;
-      --warn:#d89b2b;
-      --rose:#d56a8a;
-      --shadow:0 18px 40px rgba(25, 51, 84, .10);
-      --shadow-strong:0 24px 60px rgba(18, 39, 67, .16);
+      --panel-2:#f7fafc;
+      --card:#142544;
+      --card-2:#1b3158;
+      --text:#12263f;
+      --text-strong:#0f2138;
+      --text-inverse:#f7fbff;
+      --muted:#4c6078;
+      --muted-strong:#3f546c;
+      --muted-inverse:#b6c4d8;
+      --line:#cfd9e5;
+      --line-strong:#bccadb;
+      --accent:#2563eb;
+      --accent-2:#4f7ff0;
+      --good:#15b79e;
+      --warn:#d97706;
+      --rose:#d94f70;
+      --shadow:0 16px 36px rgba(20, 37, 68, .10);
+      --shadow-strong:0 24px 54px rgba(20, 37, 68, .14);
       --radius:18px;
       --radius-sm:14px;
       --tab-h:56px;
@@ -44,8 +46,8 @@
       backdrop-filter:blur(8px);
     }
     .hero-card{padding:26px 28px 22px}
-    .hero-card h1{margin:0 0 12px;font-size:42px;line-height:1.03;letter-spacing:-.03em;color:#10233b}
-    .hero-card p{margin:0;color:var(--muted);font-size:16px;max-width:980px;line-height:1.6}
+    .hero-card h1{margin:0 0 12px;font-size:42px;line-height:1.03;letter-spacing:-.03em;color:var(--text-strong)}
+    .hero-card p{margin:0;color:var(--muted-strong);font-size:16px;max-width:980px;line-height:1.65}
     .pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
     .pill{
       border:1px solid var(--line);
@@ -60,7 +62,7 @@
     .meta-card{padding:20px 22px}
     .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .stat{
-      background:linear-gradient(180deg, #f9fbfd, #f2f6fa);
+      background:linear-gradient(180deg, #f3f6fa, #eaf0f6);
       border:1px solid var(--line);
       border-radius:16px;
       padding:14px;
@@ -111,10 +113,11 @@
       border:1px solid var(--line);
       box-shadow:var(--shadow-strong);
     }
-    .content-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:stretch}
+    .content-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.42fr);gap:16px;align-items:stretch}
     .diagram-panel{
+      z-index:1;
       min-height:900px;
-      background:linear-gradient(180deg, #ffffff, #f8fbfe);
+      background:linear-gradient(180deg, #ffffff, #f5f8fc);
       border:1px solid var(--line);
       border-radius:18px;
       padding:18px;
@@ -128,6 +131,7 @@
     .diagram-title h2{margin:0;font-size:24px;letter-spacing:-.02em}
     .diagram-title p{margin:4px 0 0;color:var(--muted);font-size:13px}
     .inspector{
+      z-index:2;
       padding:16px;
       position:sticky;
       top:18px;
@@ -151,15 +155,16 @@
       padding:6px 10px;border-radius:999px;
       border:1px solid var(--line);
       background:#ffffff;
-      font-size:11px;color:#435a75
+      font-size:11px;color:var(--muted-strong);
+      font-weight:600;
     }
 
-    .flow-grid-6{display:grid;grid-template-columns:repeat(6, minmax(190px, 1fr));gap:16px;align-items:start}
-    .flow-grid-5{display:grid;grid-template-columns:repeat(5, minmax(220px, 1fr));gap:16px;align-items:start}
+    .flow-grid-6{display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));gap:14px;align-items:start}
+    .flow-grid-5{display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:14px;align-items:start}
     .flow-grid-4{display:grid;grid-template-columns:repeat(4, minmax(240px, 1fr));gap:16px;align-items:start}
     .column{
       position:relative;
-      min-height:690px;
+      min-height:620px;
       padding:14px;
       border-radius:18px;
       border:1px solid rgba(132,154,204,.16);
@@ -177,8 +182,8 @@
     .col-head{
       margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed #d4deea
     }
-    .col-head .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#7588a1}
-    .col-head h3{margin:6px 0 0;font-size:19px;color:#15324f}
+    .col-head .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#6a7d94}
+    .col-head h3{margin:6px 0 0;font-size:19px;color:var(--text-strong)}
     .node{
       padding:14px;
       border-radius:16px;
@@ -286,8 +291,9 @@
 
     .hidden{display:none}
 
-    @media (max-width: 1400px){
+    @media (max-width: 1480px){
       .flow-grid-6{grid-template-columns:repeat(3,1fr)}
+      .flow-grid-5{grid-template-columns:repeat(3,1fr)}
       .column{min-height:auto}
       .column::after{display:none}
       .h-flow{grid-template-columns:repeat(3,1fr)}
@@ -378,7 +384,7 @@
         min-height:46px;
       }
       .diagram-panel,.inspector{padding:12px}
-      .hero-card p,.muted,.detail-box ul,.footer-card li{font-size:13px;color:#5a6f88}
+      .hero-card p,.muted,.detail-box ul,.footer-card li{font-size:13px;color:var(--muted-strong)}
       .node small,.step small,.path-step small,.matrix-card small{
         font-size:10px;
       }
