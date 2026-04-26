@@ -1,260 +1,925 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zach Dudek | Autonomous Workflow Architecture</title>
-    <style>
-        :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.3);
-            --text-main: #f1f5f9;
-            --text-dim: #94a3b8;
-            --border: #334155;
-            --success: #10b981;
-            --radius: 12px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Zach Dudek's Autonomous Workflow Orchestration Architecture</title>
+  <style>
+    :root{
+      --bg:#eef3f8;
+      --bg-2:#dfe8f1;
+      --panel:#ffffff;
+      --panel-2:#f6f9fc;
+      --card:#16233d;
+      --card-2:#1d2d4d;
+      --text:#10233b;
+      --text-inverse:#edf4ff;
+      --muted:#52657d;
+      --muted-inverse:#aebdd4;
+      --line:#d6e0eb;
+      --line-strong:#c5d3e2;
+      --accent:#2f6fed;
+      --accent-2:#5f8fff;
+      --good:#17b897;
+      --warn:#d89b2b;
+      --rose:#d56a8a;
+      --shadow:0 18px 40px rgba(25, 51, 84, .10);
+      --shadow-strong:0 24px 60px rgba(18, 39, 67, .16);
+      --radius:18px;
+      --radius-sm:14px;
+      --tab-h:56px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:radial-gradient(circle at top left, #f8fbfe 0%, var(--bg) 36%, var(--bg-2) 100%);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}
+    body{min-height:100vh}
+    .app{max-width:1560px;margin:0 auto;padding:28px 24px 56px}
+    .hero{
+      display:grid;grid-template-columns:1.3fr .7fr;gap:18px;margin-bottom:18px;
+    }
+    .hero-card,.meta-card,.tab-shell,.inspector,.mini-panel,.footer-card{
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,253,.96));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(8px);
+    }
+    .hero-card{padding:26px 28px 22px}
+    .hero-card h1{margin:0 0 12px;font-size:42px;line-height:1.03;letter-spacing:-.03em;color:#10233b}
+    .hero-card p{margin:0;color:var(--muted);font-size:16px;max-width:980px;line-height:1.6}
+    .pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    .pill{
+      border:1px solid var(--line);
+      background:#f3f7fb;
+      color:#31465f;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      letter-spacing:.02em;
+      box-shadow:0 4px 12px rgba(31,57,90,.05);
+    }
+    .meta-card{padding:20px 22px}
+    .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .stat{
+      background:linear-gradient(180deg, #f9fbfd, #f2f6fa);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+      min-height:92px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+    }
+    .stat .k{color:#6a7e96;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .stat .v{margin-top:8px;font-size:22px;font-weight:800;color:#163252}
+    .meta-note{margin-top:12px;color:#d7e0ef;font-size:13px;line-height:1.45}
+    .top-bar{
+      display:flex;justify-content:space-between;align-items:center;gap:16px;
+      margin-bottom:14px;
+    }
+    .tabs{
+      display:flex;gap:10px;flex-wrap:wrap;
+    }
+    .tab{
+      height:var(--tab-h);
+      padding:0 18px;
+      white-space:normal;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, #ffffff, #f5f8fc);
+      color:#304862;
+      font-weight:800;
+      cursor:pointer;
+      transition:.18s ease;
+      box-shadow:0 8px 18px rgba(28,52,84,.06);
+    }
+    .tab:hover{transform:translateY(-1px);border-color:#aec2da;box-shadow:0 10px 24px rgba(28,52,84,.10)}
+    .tab.active{
+      background:linear-gradient(135deg, #2f6fed, #5f8fff);
+      border-color:#2f6fed;
+      color:#fff;
+      box-shadow:0 14px 28px rgba(47,111,237,.24);
+    }
+    .top-right{
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    }
+    .legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .legend-item{
+      display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)
+    }
+    .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+    .tab-shell{
+      padding:16px;
+      background:linear-gradient(180deg, rgba(255,255,255,.78), rgba(246,249,252,.92));
+      border:1px solid var(--line);
+      box-shadow:var(--shadow-strong);
+    }
+    .content-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:stretch}
+    .diagram-panel{
+      min-height:900px;
+      background:linear-gradient(180deg, #ffffff, #f8fbfe);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:18px;
+      position:relative;
+      overflow:hidden;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.95);
+    }
+    .diagram-title{
+      display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:16px;
+    }
+    .diagram-title h2{margin:0;font-size:24px;letter-spacing:-.02em}
+    .diagram-title p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .inspector{
+      padding:16px;
+      position:sticky;
+      top:18px;
+      height:fit-content;
+      align-self:start;
+      margin-top:0;
+      background:linear-gradient(180deg, rgba(12,22,44,.20), rgba(12,22,44,.12));
+    }
+    .inspector h3{margin:0 0 8px;font-size:18px}
+    .inspector .muted{color:var(--muted);font-size:13px;line-height:1.5}
+    .detail-box{
+      margin-top:14px;padding:14px;border-radius:16px;
+      border:1px solid rgba(132,154,204,.16);
+      background:rgba(9,18,38,.10)
+    }
+    .detail-box h4{margin:0 0 8px;font-size:16px}
+    .detail-box ul{margin:8px 0 0 18px;padding:0;color:#d8e2f6}
+    .detail-box li{margin:8px 0;line-height:1.4}
+    .detail-tag-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .tag{
+      padding:6px 10px;border-radius:999px;
+      border:1px solid var(--line);
+      background:#ffffff;
+      font-size:11px;color:#435a75
+    }
 
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text-main);
-            line-height: 1.6;
-        }
+    .flow-grid-6{display:grid;grid-template-columns:repeat(6, minmax(190px, 1fr));gap:16px;align-items:start}
+    .flow-grid-5{display:grid;grid-template-columns:repeat(5, minmax(220px, 1fr));gap:16px;align-items:start}
+    .flow-grid-4{display:grid;grid-template-columns:repeat(4, minmax(240px, 1fr));gap:16px;align-items:start}
+    .column{
+      position:relative;
+      min-height:690px;
+      padding:14px;
+      border-radius:18px;
+      border:1px solid rgba(132,154,204,.16);
+      background:linear-gradient(180deg, rgba(9,18,38,.18), rgba(9,18,38,.10));
+    }
+    .column::after{
+      content:"→";
+      position:absolute;right:-13px;top:50%;transform:translateY(-50%);
+      width:26px;height:26px;border-radius:999px;background:linear-gradient(135deg,#2f6fed,#5f8fff);
+      color:white;display:flex;align-items:center;justify-content:center;
+      font-weight:800;border:1px solid rgba(47,111,237,.18);
+      box-shadow:0 10px 20px rgba(47,111,237,.18);
+    }
+    .column:last-child::after{display:none}
+    .col-head{
+      margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed #d4deea
+    }
+    .col-head .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#7588a1}
+    .col-head h3{margin:6px 0 0;font-size:19px;color:#15324f}
+    .node{
+      padding:14px;
+      border-radius:16px;
+      border:1px solid rgba(18,39,67,.08);
+      background:linear-gradient(180deg, #182847, #11203b);
+      margin-bottom:12px;
+      cursor:pointer;
+      transition:.18s ease;
+      position:relative;
+      overflow:hidden;
+      box-shadow:0 16px 28px rgba(17,32,59,.16);
+    }
+    .node:hover{transform:translateY(-2px);border-color:rgba(95,143,255,.40);box-shadow:0 18px 30px rgba(17,32,59,.20)}
+    .node.active{outline:2px solid rgba(47,111,237,.75);border-color:rgba(47,111,237,.75)}
+    .node small{display:block;color:#9db3d3;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+    .node strong{display:block;font-size:15px;line-height:1.25;color:var(--text-inverse)}
+    .node span{display:block;margin-top:8px;color:var(--muted-inverse);font-size:12px;line-height:1.5}
+    .node .corner{
+      position:absolute;top:10px;right:10px;font-size:11px;color:#afc0da
+    }
+    .accent-blue{border-top:4px solid #67a3ff}
+    .accent-violet{border-top:4px solid #8b8fff}
+    .accent-cyan{border-top:4px solid #4fd1c5}
+    .accent-green{border-top:4px solid #6ee7a8}
+    .accent-amber{border-top:4px solid #f6c177}
+    .accent-rose{border-top:4px solid #f38ba8}
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+    .lane-wrap{
+      display:grid;gap:14px
+    }
+    .lane{
+      border:1px solid rgba(132,154,204,.16);
+      border-radius:18px;padding:14px;
+      background:linear-gradient(180deg, rgba(9,18,38,.18), rgba(9,18,38,.10));
+    }
+    .lane h3{margin:0 0 12px;font-size:18px}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{
+      padding:8px 12px;border-radius:999px;
+      border:1px solid rgba(132,154,204,.16);
+      background:rgba(9,18,38,.12);
+      font-size:12px
+    }
+    .h-flow{
+      display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:12px;align-items:center;margin-top:12px
+    }
+    .step{
+      min-height:128px;border-radius:16px;padding:12px;
+      border:1px solid rgba(132,154,204,.16);
+      background:linear-gradient(180deg, rgba(28,42,74,.96), rgba(22,33,59,.95));
+      position:relative;cursor:pointer;transition:.18s ease
+    }
+    .step:hover{transform:translateY(-2px)}
+    .step::after{
+      content:"→";position:absolute;right:-10px;top:50%;transform:translateY(-50%);
+      width:20px;height:20px;border-radius:999px;background:#31558f;color:white;
+      display:flex;align-items:center;justify-content:center;font-size:11px
+    }
+    .step:last-child::after{display:none}
+    .step small{display:block;color:#9db3d3;font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+    .step strong{display:block;font-size:14px;color:var(--text-inverse)}
+    .step span{display:block;margin-top:8px;color:var(--muted-inverse);font-size:12px;line-height:1.45}
 
-        header {
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 40px;
-            padding-bottom: 20px;
-        }
+    .two-paths{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+    .path-card{
+      border-radius:18px;padding:14px;border:1px solid rgba(132,154,204,.16);
+      background:linear-gradient(180deg, rgba(9,18,38,.18), rgba(9,18,38,.10));
+    }
+    .path-card h4{margin:0 0 10px;font-size:17px}
+    .path-stack{display:grid;gap:10px}
+    .path-step{
+      padding:12px;border-radius:14px;background:linear-gradient(180deg, rgba(28,42,74,.96), rgba(22,33,59,.95));
+      border:1px solid rgba(132,154,204,.16);cursor:pointer
+    }
+    .path-step small{display:block;color:#9db3d3;font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+    .path-step strong{display:block;font-size:14px;color:var(--text-inverse)}
+    .path-step span{display:block;color:var(--muted-inverse);font-size:12px;line-height:1.45;margin-top:8px}
+    .connector-line{
+      height:30px;margin:8px 0 4px;border-left:2px dashed rgba(123,156,222,.45);margin-left:16px
+    }
 
-        h1 { font-size: 2.2rem; margin: 0; letter-spacing: -0.02em; }
-        .subtitle { color: var(--text-dim); font-size: 1.1rem; }
+    .matrix{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:12px
+    }
+    .matrix-card{
+      min-height:176px;padding:14px;border-radius:16px;background:linear-gradient(180deg, rgba(28,42,74,.96), rgba(22,33,59,.95));
+      border:1px solid rgba(132,154,204,.16);cursor:pointer
+    }
+    .matrix-card small{display:block;color:#9db3d3;font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+    .matrix-card strong{display:block;font-size:15px;color:var(--text-inverse)}
+    .matrix-card span{display:block;color:var(--muted-inverse);font-size:12px;line-height:1.5;margin-top:8px}
 
-        /* Tabs */
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-            background: rgba(255,255,255,0.05);
-            padding: 6px;
-            border-radius: 14px;
-            width: fit-content;
-        }
+    .footer-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px
+    }
+    .footer-card{padding:16px}
+    .footer-card h3{margin:0 0 10px;font-size:18px}
+    .footer-card ul{margin:0 0 0 18px;padding:0;color:#dae4f6}
+    .footer-card li{margin:10px 0;line-height:1.45}
+    .callout{
+      margin-top:12px;padding:12px 14px;border-radius:14px;
+      border:1px solid rgba(132,154,204,.16);background:rgba(9,18,38,.12);
+      color:#dbe4f8;font-size:13px;line-height:1.5
+    }
 
-        .tab-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-dim);
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: 0.2s;
-        }
+    .hidden{display:none}
 
-        .tab-btn.active {
-            background: var(--accent);
-            color: white;
-            box-shadow: 0 4px 12px var(--accent-glow);
-        }
-
-        .tab-content { display: none; animation: fadeIn 0.4s ease; }
-        .tab-content.active { display: block; }
-
-        /* Visual Components */
-        .arch-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .node {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 24px;
-            position: relative;
-        }
-
-        .node-tag {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            background: var(--border);
-            padding: 2px 8px;
-            border-radius: 4px;
-            color: var(--text-dim);
-            margin-bottom: 12px;
-            display: inline-block;
-        }
-
-        .flow-line {
-            height: 2px;
-            background: var(--border);
-            margin: 20px 0;
-            position: relative;
-        }
-
-        .flow-line::after {
-            content: '▶';
-            position: absolute;
-            right: -5px;
-            top: -7px;
-            font-size: 12px;
-            color: var(--border);
-        }
-
-        /* Tech Badges */
-        .badge {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            margin: 4px;
-            display: inline-block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .stack-list { list-style: none; padding: 0; }
-        .stack-list li {
-            padding: 12px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .legend {
-            margin-top: 40px;
-            padding: 20px;
-            background: rgba(0,0,0,0.2);
-            border-radius: var(--radius);
-            font-size: 0.9rem;
-            color: var(--text-dim);
-        }
-    </style>
+    @media (max-width: 1400px){
+      .flow-grid-6{grid-template-columns:repeat(3,1fr)}
+      .column{min-height:auto}
+      .column::after{display:none}
+      .h-flow{grid-template-columns:repeat(3,1fr)}
+      .step::after{display:none}
+    }
+    @media (max-width: 1120px){
+      .hero{grid-template-columns:1fr}
+      .content-grid{grid-template-columns:1fr}
+      .inspector{
+        position:relative;
+        top:0;
+        min-height:auto !important;
+      }
+      .diagram-panel{min-height:auto}
+      .flow-grid-5,.flow-grid-4{grid-template-columns:repeat(2,1fr)}
+      .two-paths,.footer-grid,.matrix,.meta-grid{grid-template-columns:1fr}
+    }
+    @media (max-width: 760px){
+      .app{padding:16px 12px 28px}
+      .hero-card,.meta-card,.tab-shell,.diagram-panel,.inspector,.footer-card{border-radius:16px}
+      .hero-card{padding:20px 18px}
+      .meta-card{padding:16px}
+      .hero-card h1{font-size:28px;line-height:1.08}
+      .hero-card p{font-size:14px;line-height:1.55}
+      .pills{gap:8px}
+      .pill{font-size:11px;padding:7px 10px}
+      .top-bar{flex-direction:column;align-items:stretch;gap:12px}
+      .tabs{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+      }
+      .tab{
+        width:100%;
+        min-height:50px;
+        height:auto;
+        padding:10px 12px;
+        text-align:left;
+        line-height:1.25;
+        font-size:13px;
+      }
+      .top-right{justify-content:flex-start}
+      .legend{row-gap:6px}
+      .diagram-title{display:block}
+      .diagram-title h2{font-size:22px}
+      .diagram-title p{font-size:13px;line-height:1.5}
+      .flow-grid-6,.flow-grid-5,.flow-grid-4,.h-flow{grid-template-columns:1fr}
+      .two-paths,.footer-grid,.matrix,.meta-grid{grid-template-columns:1fr}
+      .column,.lane,.path-card,.footer-card,.detail-box,.matrix-card{
+        padding:12px;
+      }
+      .column{min-height:auto}
+      .col-head h3{font-size:18px}
+      .node,.step,.path-step,.matrix-card{
+        padding:12px;
+        border-radius:14px;
+      }
+      .node strong,.step strong,.path-step strong,.matrix-card strong{
+        font-size:15px;
+      }
+      .node span,.step span,.path-step span,.matrix-card span{
+        font-size:12px;
+        line-height:1.5;
+      }
+      .step{min-height:auto}
+      .inspector{
+        position:relative;
+        top:0;
+        min-height:auto !important;
+      }
+      .detail-tag-row{gap:6px}
+      .tag{font-size:10px;padding:6px 9px}
+      .stat{min-height:auto;padding:12px}
+      .stat .v{font-size:20px}
+      .h-flow,.flow-grid-6,.flow-grid-5,.flow-grid-4,.matrix,.two-paths,.footer-grid{
+        gap:10px;
+      }
+      .lane-wrap{gap:10px}
+      .chips{gap:6px}
+      .chip{font-size:11px;padding:7px 10px}
+    }
+    @media (max-width: 480px){
+      .app{padding:12px 10px 24px}
+      .hero-card h1{font-size:24px}
+      .tabs{grid-template-columns:1fr}
+      .tab{
+        font-size:13px;
+        min-height:46px;
+      }
+      .diagram-panel,.inspector{padding:12px}
+      .hero-card p,.muted,.detail-box ul,.footer-card li{font-size:13px;color:#5a6f88}
+      .node small,.step small,.path-step small,.matrix-card small{
+        font-size:10px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="app">
+    <section class="hero">
+      <div class="hero-card">
+        <h1>Zach Dudek's Autonomous Workflow Orchestration Architecture</h1>
+        <p>
+          Interactive, multi-view architecture explorer for the current Autonomous Workflow project:
+          FastAPI application layer, Redis-backed job state, direct file-ingest execution path,
+          OpenAI + Anthropic Claude orchestration, judge-driven decisioning, continuation handling,
+          stitching, and artifact generation.
+        </p>
+        <div class="pills">
+          <div class="pill">Neutral dark enterprise theme</div>
+          <div class="pill">Single-file tabbed explorer</div>
+          <div class="pill">Explicit vendor names</div>
+          <div class="pill">Repo-current architecture</div>
+          <div class="pill">Interactive click-to-inspect nodes</div>
+        </div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-grid">
+          <div class="stat"><div class="k">Primary backend</div><div class="v">FastAPI</div></div>
+          <div class="stat"><div class="k">State store</div><div class="v">Redis</div></div>
+          <div class="stat"><div class="k">Execution models</div><div class="v">OpenAI + Claude</div></div>
+          <div class="stat"><div class="k">Artifact outputs</div><div class="v">HTML + JSON</div></div>
+        </div>
+        <div class="meta-note">
+          This version is intentionally comprehensive. It reflects the current repo structure and also flags what does
+          <strong>not</strong> appear to be present yet, such as auth, dedicated worker separation, binary parsing, deployment manifests,
+          observability stack, and persistent run history outside Redis/job snapshots.
+        </div>
+      </div>
+    </section>
 
-<div class="container">
-    <header>
-        <h1>Zach Dudek's Autonomous Workflow</h1>
-        <div class="subtitle">Orchestration Architecture & System Design v3.0</div>
-    </header>
-
-    <div class="tabs">
-        <button class="tab-btn active" onclick="showTab('high-level')">System Overview</button>
-        <button class="tab-btn" onclick="showTab('runtime')">Runtime Lifecycle</button>
-        <button class="tab-btn" onclick="showTab('tech')">Technology Stack</button>
+    <div class="top-bar">
+      <div class="tabs">
+        <button class="tab active" data-tab="overview">1. System Overview</button>
+        <button class="tab" data-tab="lifecycle">2. Request Lifecycle</button>
+        <button class="tab" data-tab="orchestration">3. Model Orchestration</button>
+        <button class="tab" data-tab="deployment">4. State, Hosting & Repo Gaps</button>
+      </div>
+      <div class="top-right">
+        <div class="legend">
+          <div class="legend-item"><span class="dot" style="background:#67a3ff"></span> Interface / API</div>
+          <div class="legend-item"><span class="dot" style="background:#4fd1c5"></span> Execution / model logic</div>
+          <div class="legend-item"><span class="dot" style="background:#f6c177"></span> Decision / control</div>
+          <div class="legend-item"><span class="dot" style="background:#f38ba8"></span> Output / persistence</div>
+        </div>
+      </div>
     </div>
 
-    <div id="high-level" class="tab-content active">
-        <div class="arch-grid">
-            <div class="node">
-                <span class="node-tag">Frontend Layer</span>
-                <h3>Client Interface</h3>
-                <p>Modern HTML/JS UI handling file uploads and multi-iteration configuration.</p>
-                <div class="badge">index.html</div>
+    <section class="tab-shell">
+      <div class="content-grid">
+        <div>
+          <div class="diagram-panel tab-panel js-measure-panel" id="tab-overview">
+            <div class="diagram-title">
+              <div>
+                <h2>System Overview</h2>
+                <p>Layered end-to-end view from user interaction through orchestration, state, and artifact delivery.</p>
+              </div>
             </div>
 
-            <div class="node">
-                <span class="node-tag">API Gateway</span>
-                <h3>FastAPI Backend</h3>
-                <p>Manages async job creation, Redis state persistence, and output directory mounting.</p>
-                <div class="badge">app_1.py</div>
+            <div class="flow-grid-6">
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Layer 1</div>
+                  <h3>User & UI</h3>
+                </div>
+                <div class="node accent-blue" data-title="Custom HTML frontend" data-body="The current browser UI is a standalone HTML application that lets the user enter a prompt, choose max iterations, attach files, and review status, logs, artifacts, summary, and full output. It renders selected files client-side and posts FormData to the backend." data-tags="UI,HTML,Client,Prompt entry">
+                  <small>Interface</small><strong>Custom HTML frontend</strong>
+                  <span>Prompt entry, file attach, run trigger, result display.</span>
+                  <div class="corner">UI</div>
+                </div>
+                <div class="node accent-blue" data-title="Solution consultant interaction model" data-body="This repo implies a self-serve workflow for consultants and technical stakeholders: enter a business task, optionally attach materials, run the workflow, inspect comparative output and artifacts, then reuse/share the results." data-tags="Users,SCs,Stakeholders">
+                  <small>Audience</small><strong>Solution consultant interaction model</strong>
+                  <span>Self-serve, repeatable internal workflow.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Layer 2</div>
+                  <h3>FastAPI App Layer</h3>
+                </div>
+                <div class="node accent-violet" data-title="FastAPI routes" data-body="The backend serves the UI at /, exposes /health, accepts queued jobs at /run, returns job status at /status/{job_id}, accepts direct multipart execution at /run-with-files, and mounts /outputs for generated artifacts." data-tags="FastAPI,/run,/run-with-files,/status,/outputs">
+                  <small>Backend</small><strong>FastAPI routes</strong>
+                  <span>/, /health, /run, /status/{job_id}, /run-with-files, /outputs.</span>
+                  <div class="corner">API</div>
+                </div>
+                <div class="node accent-violet" data-title="Direct execution path" data-body="The browser UI currently calls /run-with-files directly. That endpoint reads uploaded files, decodes text where possible, injects a structured attached-files context block into the prompt, and invokes the orchestration runner synchronously for the response payload." data-tags="Current UX,FormData,Direct path">
+                  <small>Current path</small><strong>Direct execution path</strong>
+                  <span>UI → /run-with-files → runner → immediate response JSON.</span>
+                </div>
+                <div class="node accent-violet" data-title="Queued job path" data-body="The app also supports a background style path via /run. It creates a job, persists it in Redis, spawns a thread to process it, and lets consumers poll /status/{job_id}. This is important architecturally even though the current UI does not appear to use it yet." data-tags="Queued jobs,Background thread,Polling">
+                  <small>Async-capable path</small><strong>Queued job path</strong>
+                  <span>Create job, persist state, spawn worker thread, poll status.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Layer 3</div>
+                  <h3>Prompt Engineering</h3>
+                </div>
+                <div class="node accent-cyan" data-title="Attachment context injection" data-body="Uploaded files are read server-side. Text files are decoded as UTF-8 or Latin-1, otherwise marked unsupported. Up to 20,000 characters per file are appended into a structured ATTACHED FILES CONTEXT block that becomes part of the final prompt sent into orchestration." data-tags="Files,Context injection,Prompt packaging">
+                  <small>Pre-processing</small><strong>Attachment context injection</strong>
+                  <span>Repo-supported grounding from uploaded text content.</span>
+                </div>
+                <div class="node accent-cyan" data-title="Prompt optimizer layer" data-body="The orchestration engine includes a prompt optimization stage that can run through OpenAI, Claude, or compare both. It evaluates prompts for clarity, specificity, structure, efficiency, and creativity control, then selects an optimized active prompt." data-tags="Optimizer,OpenAI,Claude,compare_both">
+                  <small>Pre-model intelligence</small><strong>Prompt optimizer layer</strong>
+                  <span>Single-provider or compare_both optimization strategies.</span>
+                </div>
+                <div class="node accent-cyan" data-title="Current optimizer reality" data-body="There is also an important current-state caveat: both the backend app and runner include debug flags that force the optimizer off. Architecturally the layer exists and is substantial, but operationally it may currently be disabled while debugging." data-tags="Current-state caveat,FORCE_DISABLE_OPTIMIZER">
+                  <small>Reality check</small><strong>Optimizer currently appears forced off</strong>
+                  <span>Designed in; possibly disabled in practice.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Layer 4</div>
+                  <h3>Parallel Model Execution</h3>
+                </div>
+                <div class="node accent-green" data-title="OpenAI execution path" data-body="OpenAI is called via the Responses API. The initial call stores output_text plus response_id. Follow-up turns can continue the conversation using previous_response_id, enabling continuation handling and iterative refinement." data-tags="OpenAI,Responses API,previous_response_id">
+                  <small>Provider path A</small><strong>OpenAI execution path</strong>
+                  <span>Initial + follow-up conversation state support.</span>
+                </div>
+                <div class="node accent-green" data-title="Anthropic Claude execution path" data-body="Claude is called through anthropic.messages.create with a rolling messages array. The orchestration stores assistant text and preserves conversation state for follow-up and continuation handling." data-tags="Claude,Anthropic,messages API">
+                  <small>Provider path B</small><strong>Claude execution path</strong>
+                  <span>Parallel peer path to OpenAI with retained chat state.</span>
+                </div>
+                <div class="node accent-green" data-title="Parallelism" data-body="OpenAI and Claude initial calls run in parallel through a ThreadPoolExecutor with max_workers=2. The judge only executes after both results return, making parallelism a central runtime characteristic of the design." data-tags="Parallelism,ThreadPoolExecutor,Latency">
+                  <small>Runtime behavior</small><strong>Parallel execution</strong>
+                  <span>Both model paths run simultaneously before judging.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Layer 5</div>
+                  <h3>Judge & Control Loop</h3>
+                </div>
+                <div class="node accent-amber" data-title="Judge model" data-body="A structured judge step scores OpenAI and Claude across clarity, completeness, practical usefulness, tone appropriateness, and overall strength. It chooses a winner and a next action: accept, revise_prompt_and_rerun, or follow_up_on_winner." data-tags="Judge,Scorecard,Decision schema">
+                  <small>Decisioning</small><strong>Judge model</strong>
+                  <span>Structured scoring and action selection.</span>
+                </div>
+                <div class="node accent-amber" data-title="Continuation handling" data-body="If the winning path is incomplete, the system issues follow-up prompts to the chosen provider. It can continue multiple times until the answer appears complete or the continuation attempt ceiling is hit." data-tags="Continuation,Completion,Follow-up">
+                  <small>Refinement</small><strong>Continuation handling</strong>
+                  <span>Protects against cut-off or partial responses.</span>
+                </div>
+                <div class="node accent-amber" data-title="Stitching" data-body="If a provider answer required a continuation, the system can run a stitching pass that merges the original answer and the continuation into a single cleaned final output, removing duplication and cut-off fragments." data-tags="Stitching,Cleanup,Final response">
+                  <small>Finalization</small><strong>Stitching pass</strong>
+                  <span>Produces one polished answer instead of fragments.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Layer 6</div>
+                  <h3>State, Artifacts & Delivery</h3>
+                </div>
+                <div class="node accent-rose" data-title="Redis-backed job state" data-body="The queued path persists job state in Redis. Each job tracks status, stage, request details, model result states, artifacts, final output, and errors. /status/{job_id} returns that live job object." data-tags="Redis,Job status,Polling">
+                  <small>Persistence</small><strong>Redis-backed job state</strong>
+                  <span>Queued workflow state, staged results, artifact pointers.</span>
+                </div>
+                <div class="node accent-rose" data-title="Artifact generation" data-body="After orchestration completes, the runner saves both HTML and JSON outputs into an outputs directory. The FastAPI app mounts /outputs as static files, making artifacts directly retrievable from the hosted app." data-tags="Artifacts,HTML,JSON,/outputs">
+                  <small>Output</small><strong>Artifact generation</strong>
+                  <span>Saved run reports plus machine-readable execution record.</span>
+                </div>
+                <div class="node accent-rose" data-title="Traceable final payload" data-body="The direct execution path returns status, summary, full_output, artifact links, logs, runtime_seconds, and error details. That makes the UI both an execution console and a result review surface." data-tags="Result payload,Logs,Runtime">
+                  <small>Delivery</small><strong>Traceable final payload</strong>
+                  <span>Outcome, logs, runtime, and artifact links in one response.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="diagram-panel tab-panel hidden js-measure-panel" id="tab-lifecycle">
+            <div class="diagram-title">
+              <div>
+                <h2>Request Lifecycle</h2>
+                <p>The repo currently supports two request patterns: direct execution from the UI, and queued/background-style processing with job polling.</p>
+              </div>
             </div>
 
-            <div class="node">
-                <span class="node-tag">State Store</span>
-                <h3>Redis Cache</h3>
-                <p>Synchronous job tracking, iteration history, and result caching for low-latency retrieval.</p>
-                <div class="badge">Job:ID Mapping</div>
+            <div class="lane-wrap">
+              <div class="lane">
+                <h3>Current browser path used by the UI</h3>
+                <div class="chips">
+                  <div class="chip">UI posts FormData</div>
+                  <div class="chip">/run-with-files</div>
+                  <div class="chip">Immediate JSON response</div>
+                  <div class="chip">Artifacts linked in payload</div>
+                </div>
+
+                <div class="h-flow">
+                  <div class="step" data-title="1. Prompt + files entered" data-body="The user enters a prompt, chooses max iterations, optionally uploads multiple files, and clicks Run workflow from the custom HTML UI." data-tags="UI,Input">
+                    <small>Step 1</small><strong>Prompt + files entered</strong><span>User prepares the request in-browser.</span>
+                  </div>
+                  <div class="step" data-title="2. FormData sent to /run-with-files" data-body="The UI packages prompt, max_iterations, user_id, and files into multipart FormData and POSTs to /run-with-files." data-tags="FormData,/run-with-files">
+                    <small>Step 2</small><strong>POST /run-with-files</strong><span>Browser sends one combined request.</span>
+                  </div>
+                  <div class="step" data-title="3. Files decoded and injected" data-body="The backend reads each uploaded file, attempts text decoding, builds structured file payloads, and appends them to the prompt as ATTACHED FILES CONTEXT." data-tags="Decode,Context injection">
+                    <small>Step 3</small><strong>Decode + inject context</strong><span>Supporting materials become prompt context.</span>
+                  </div>
+                  <div class="step" data-title="4. run_autonomous_compare invoked" data-body="The app invokes run_autonomous_compare directly with the combined prompt, user_id, max_iterations, and built runner options." data-tags="Runner,Execution">
+                    <small>Step 4</small><strong>Invoke orchestration runner</strong><span>Direct request/response execution path.</span>
+                  </div>
+                  <div class="step" data-title="5. Orchestration completes" data-body="The runner executes optimization logic, parallel model calls, judging, follow-up or stitching as needed, final output extraction, and output saving." data-tags="Orchestration,Judge,Stitching">
+                    <small>Step 5</small><strong>Complete orchestration</strong><span>Models, judge, and finalization run.</span>
+                  </div>
+                  <div class="step" data-title="6. HTML/JSON artifacts written" data-body="The runner writes HTML and JSON artifact files into outputs and returns their relative paths." data-tags="Artifacts,outputs">
+                    <small>Step 6</small><strong>Save outputs</strong><span>Run report and execution JSON are generated.</span>
+                  </div>
+                  <div class="step" data-title="7. UI renders result" data-body="The UI receives summary, full_output, runtime, logs, and artifact links, then renders them in the latest response panel." data-tags="UI render,Results">
+                    <small>Step 7</small><strong>Render result in UI</strong><span>Single response refreshes the screen.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lane">
+                <h3>Queued/background-capable path present in the app</h3>
+                <div class="chips">
+                  <div class="chip">/run</div>
+                  <div class="chip">job_id returned immediately</div>
+                  <div class="chip">Redis persistence</div>
+                  <div class="chip">/status polling</div>
+                </div>
+
+                <div class="two-paths">
+                  <div class="path-card">
+                    <h4>Submission & processing</h4>
+                    <div class="path-stack">
+                      <div class="path-step" data-title="Queued submission" data-body="/run accepts a JSON RunRequest containing prompt, max_iterations, user_id, and optional options." data-tags="/run,RunRequest">
+                        <small>Submission</small><strong>POST /run</strong><span>JSON-based queued submission path.</span>
+                      </div>
+                      <div class="connector-line"></div>
+                      <div class="path-step" data-title="Job object created" data-body="create_job generates a UUID job_id and stores request, result placeholders, artifact placeholders, status, stage, timestamps, and errors in Redis." data-tags="UUID,Redis,Job schema">
+                        <small>State init</small><strong>Create job record</strong><span>Persist request + empty result structure.</span>
+                      </div>
+                      <div class="connector-line"></div>
+                      <div class="path-step" data-title="Background thread begins" data-body="A daemon thread is started with process_job(job_id), which updates stages, invokes the orchestration runner, extracts artifacts, maps logs to job stage transitions, and saves final state." data-tags="Thread,process_job">
+                        <small>Worker</small><strong>Spawn process_job thread</strong><span>Background processing starts immediately.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="path-card">
+                    <h4>Observation & retrieval</h4>
+                    <div class="path-stack">
+                      <div class="path-step" data-title="Immediate acknowledgement" data-body="The caller receives job_id, queued status, and a success message right away instead of waiting for model calls to finish." data-tags="job_id,Immediate return">
+                        <small>Response</small><strong>Return job_id immediately</strong><span>Non-blocking submission experience.</span>
+                      </div>
+                      <div class="connector-line"></div>
+                      <div class="path-step" data-title="Status polling" data-body="/status/{job_id} fetches the Redis-backed job document. It can show queued, running, judging, completed, or failed state plus artifacts and final output once available." data-tags="/status,Polling,Redis">
+                        <small>Monitoring</small><strong>Poll /status/{job_id}</strong><span>Read live persisted job state.</span>
+                      </div>
+                      <div class="connector-line"></div>
+                      <div class="path-step" data-title="Artifacts retrieved" data-body="When processing is done, the final job state contains html_path and json_path under artifacts, and the files themselves are reachable via the /outputs static mount." data-tags="Artifacts,/outputs">
+                        <small>Outputs</small><strong>Fetch artifacts</strong><span>HTML/JSON reports available for download.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div class="diagram-panel tab-panel hidden js-measure-panel" id="tab-orchestration">
+            <div class="diagram-title">
+              <div>
+                <h2>Model Orchestration Engine</h2>
+                <p>Internal control flow inside <code>run_autonomous_compare</code> and <code>run_autonomous_loop</code>.</p>
+              </div>
+            </div>
+
+            <div class="flow-grid-5">
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Phase 1</div>
+                  <h3>Initialization</h3>
+                </div>
+                <div class="node accent-blue" data-title="Configuration and clients" data-body="The runner loads environment variables for model names, tokens, timeouts, optimization defaults, stitching defaults, and API keys. It initializes OpenAI and Anthropic clients up front." data-tags="Env,Clients,Config">
+                  <small>Config</small><strong>Configuration + API clients</strong><span>Models, timeouts, keys, defaults.</span>
+                </div>
+                <div class="node accent-blue" data-title="Logging envelope" data-body="A log list is created and populated through run_step wrappers. Each step records START / DONE / FAIL and duration, which later feeds the response payload and queued job state mapping." data-tags="Logging,run_step">
+                  <small>Observability</small><strong>Step-wrapped logging</strong><span>Traceable execution chronology.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Phase 2</div>
+                  <h3>Prompt preparation</h3>
+                </div>
+                <div class="node accent-cyan" data-title="Optimize prompt" data-body="optimize_prompt can run as compare_both, single_openai, or single_claude. It returns optimized_prompt, explanation, variants, provider metadata, and optional selection rationale." data-tags="Prompt optimization,compare_both">
+                  <small>Preparation</small><strong>Optimize prompt</strong><span>Transforms original prompt into active prompt.</span>
+                </div>
+                <div class="node accent-cyan" data-title="Active prompt established" data-body="The workflow strips and validates the optimized prompt, then begins autonomous loop iterations against that active prompt." data-tags="Active prompt">
+                  <small>Preparation</small><strong>Establish active prompt</strong><span>Single canonical prompt for execution.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Phase 3</div>
+                  <h3>Parallel execution</h3>
+                </div>
+                <div class="node accent-green" data-title="OpenAI initial" data-body="OpenAI initial call produces ProviderResult with provider, model, prompt, text, error, and response_id. That response_id becomes the anchor for future follow-up turns if OpenAI wins." data-tags="OpenAI,ProviderResult">
+                  <small>Provider A</small><strong>OpenAI initial call</strong><span>Responses API + response state tracking.</span>
+                </div>
+                <div class="node accent-green" data-title="Claude initial" data-body="Claude initial call produces ProviderResult with provider, model, prompt, text, error, and response_id. Message history is retained in ClaudeChatState for follow-up turns if Claude wins." data-tags="Claude,ClaudeChatState">
+                  <small>Provider B</small><strong>Claude initial call</strong><span>Messages API + rolling message state.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Phase 4</div>
+                  <h3>Judge-driven control</h3>
+                </div>
+                <div class="node accent-amber" data-title="Structured judge decision" data-body="judge_outputs returns a structured decision payload: winner, next_action, reason, revised_prompt, follow_up_prompt, rerun_target, confidence, and both scorecards. A safe fallback judge exists if structured judging fails." data-tags="JudgeDecision,JSON schema">
+                  <small>Decision</small><strong>Structured judge decision</strong><span>Winner + scorecards + next action.</span>
+                </div>
+                <div class="node accent-amber" data-title="Action branching" data-body="The loop branches into accept, revise_prompt_and_rerun, or follow_up_on_winner. If rerun_target is Both, the active prompt is revised and the loop continues." data-tags="Branching,Rerun,Both">
+                  <small>Control logic</small><strong>Action branching</strong><span>Accept, rerun, or follow-up.</span>
+                </div>
+              </div>
+
+              <div class="column">
+                <div class="col-head">
+                  <div class="eyebrow">Phase 5</div>
+                  <h3>Refinement & save</h3>
+                </div>
+                <div class="node accent-rose" data-title="Continuation and stitching" data-body="If follow_up_on_winner is chosen, the selected provider gets a continuation prompt. Multiple continuation attempts may occur. If stitching is enabled, a final cleanup pass merges the original and continuation into one final response." data-tags="Continuation,Stitching">
+                  <small>Finalization</small><strong>Continuation + stitching</strong><span>Recovers incomplete winning answers.</span>
+                </div>
+                <div class="node accent-rose" data-title="Final output extraction and save_outputs" data-body="The workflow chooses the final answer from stitched_result, post_action_result, or winning provider output, then writes HTML and JSON output artifacts and returns a user-facing success payload." data-tags="save_outputs,final_output,HTML,JSON">
+                  <small>Delivery</small><strong>Final output extraction + save</strong><span>Artifact files plus final response payload.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer-grid">
+              <div class="footer-card">
+                <h3>Observed strengths in the current design</h3>
+                <ul>
+                  <li>Parallel model execution rather than sequential waiting.</li>
+                  <li>Clear separation between provider call logic, judging, prompt optimization, and output reporting.</li>
+                  <li>Strong traceability via logs, iteration records, scorecards, optimizer metadata, and artifact files.</li>
+                  <li>Both direct execution and queued-state patterns exist in the same project.</li>
+                </ul>
+              </div>
+              <div class="footer-card">
+                <h3>Architectural caveats visible in the repo</h3>
+                <ul>
+                  <li>Optimizer appears implemented but forced off via debug flags in both app and runner.</li>
+                  <li>The queued path uses a thread inside the app process, not a dedicated external worker service.</li>
+                  <li>The current file ingestion path is text-centric; richer parsing for PDFs, DOCX, spreadsheets, and images is not evident here.</li>
+                  <li>Auth, user roles, and persistent user/run history beyond Redis job snapshots are not apparent.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="diagram-panel tab-panel hidden js-measure-panel" id="tab-deployment">
+            <div class="diagram-title">
+              <div>
+                <h2>State, Hosting & Repo Gaps</h2>
+                <p>Current components visible in the repo, plus the most likely missing layers if you later want to extend this into a broader production-ready architecture.</p>
+              </div>
+            </div>
+
+            <div class="matrix">
+              <div class="matrix-card" data-title="Visible in repo: Hosting-ready app shape" data-body="The current repo has a hosted-web-app shape: FastAPI app, static outputs mount, custom browser UI, environment-based secrets, Redis-backed job state, and downloadable artifacts. The previous architecture file also explicitly references Render-hosted deployment intent." data-tags="Hosting,FastAPI,Render">
+                <small>Present now</small><strong>Hosting-ready app shape</strong><span>FastAPI + UI + outputs + secrets-driven config.</span>
+              </div>
+              <div class="matrix-card" data-title="Visible in repo: Redis as state spine" data-body="Redis is used for job persistence and status retrieval in the queued path. Job data includes stage, timestamps, request payload, provider statuses, artifacts, and final output." data-tags="Redis,Jobs,Status">
+                <small>Present now</small><strong>Redis as state spine</strong><span>Job_id, polling, stateful execution tracking.</span>
+              </div>
+              <div class="matrix-card" data-title="Visible in repo: Artifacts as first-class outputs" data-body="HTML and JSON artifacts are intentionally generated on every successful run and exposed through a static mount, making the architecture naturally shareable and reviewable." data-tags="Artifacts,Sharing,Traceability">
+                <small>Present now</small><strong>Artifact-first design</strong><span>Outputs are review surfaces, not just side effects.</span>
+              </div>
+
+              <div class="matrix-card" data-title="Not clearly present: deployment manifests" data-body="This repo snapshot does not appear to include Dockerfile, render.yaml, Procfile, Terraform, Kubernetes manifests, or CI/CD workflow definitions. Hosting intent is visible, but deployment topology is not fully codified here." data-tags="Missing,Docker,Render config,CI/CD">
+                <small>Missing / unclear</small><strong>Deployment manifests</strong><span>Hosting intent is visible; infra-as-code is not.</span>
+              </div>
+              <div class="matrix-card" data-title="Not clearly present: dedicated worker separation" data-body="The queued execution path uses an in-process Python thread. There is no visible separate worker service, job queue broker beyond Redis storage, or horizontally separated executor tier in this repo snapshot." data-tags="Missing,Worker tier,Queue architecture">
+                <small>Missing / unclear</small><strong>Dedicated worker separation</strong><span>Queued pattern exists, but not a separate worker service.</span>
+              </div>
+              <div class="matrix-card" data-title="Not clearly present: auth, access, tenancy" data-body="No auth middleware, login system, API authorization, stakeholder access controls, or multi-tenant boundaries are obvious in the current repo snapshot." data-tags="Missing,Auth,Access control">
+                <small>Missing / unclear</small><strong>Auth & access control</strong><span>Useful for leadership sharing later if broadened.</span>
+              </div>
+
+              <div class="matrix-card" data-title="Not clearly present: rich file parsing pipeline" data-body="The current upload path decodes text and labels unsupported/binary content when decoding fails. There is no visible OCR pipeline, PDF parser, DOCX parser, spreadsheet parser, vector store, or retrieval layer." data-tags="Missing,Parsers,RAG">
+                <small>Missing / unclear</small><strong>Rich file parsing pipeline</strong><span>Current file support appears text-first.</span>
+              </div>
+              <div class="matrix-card" data-title="Not clearly present: long-term run history and analytics" data-body="Artifacts and job status exist, but there is no visible run catalog UI, analytics store, audit dashboard, model cost telemetry, or experiment history browser in this repo snapshot." data-tags="Missing,Analytics,History,Observability">
+                <small>Missing / unclear</small><strong>Run history & analytics</strong><span>Great future layer if you want leadership visibility.</span>
+              </div>
+              <div class="matrix-card" data-title="Not clearly present: external knowledge integration" data-body="This repo focuses on prompt execution and uploaded context. It does not visibly include CRM, knowledge base, document store, Slack, Salesforce, or demo asset integrations yet." data-tags="Missing,Integrations,Knowledge sources">
+                <small>Missing / unclear</small><strong>Knowledge integrations</strong><span>Natural next expansion if you scale the tool.</span>
+              </div>
+            </div>
+
+            <div class="footer-grid">
+              <div class="footer-card">
+                <h3>What appears to be missing from the repo</h3>
+                <ul>
+                  <li>Deployment/config manifests for the hosting layer.</li>
+                  <li>Dedicated worker/service separation beyond in-process threads.</li>
+                  <li>Authentication, role-based access, and stakeholder gating.</li>
+                  <li>Rich parsing and retrieval for non-text uploaded artifacts.</li>
+                  <li>Persistent run catalog, analytics, cost telemetry, and monitoring.</li>
+                </ul>
+                <div class="callout">
+                  That does <strong>not</strong> mean your architecture is weak — it means the repo is strong on orchestration core and lighter on platform-hardening layers.
+                </div>
+              </div>
+              <div class="footer-card">
+                <h3>Why this version works for mixed technical stakeholders</h3>
+                <ul>
+                  <li>Leadership can see the full system shape without reading code.</li>
+                  <li>Solution consultants can understand what is already real versus what is still implied or future-state.</li>
+                  <li>Technical reviewers can inspect the parallelism, judging, stitching, artifacts, and job-state patterns in one place.</li>
+                  <li>You can peel this back later into a simplified exec version without rebuilding the source asset.</li>
+                </ul>
+                <div class="callout">
+                  Click any architecture block to inspect it. The right-side panel is there so you can narrate the system live without extra slide notes.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="flow-line"></div>
+        <aside class="inspector">
+          <h3>Node Inspector</h3>
+          <div class="muted">
+            Click any box in the active tab to inspect it. This keeps the page visually clean while still letting you speak to specifics live.
+          </div>
 
-        <div class="arch-grid">
-            <div class="node" style="grid-column: span 2; border-color: var(--accent);">
-                <span class="node-tag" style="background: var(--accent); color: white;">Core Engine</span>
-                <h3>Autonomous Compare Runner</h3>
-                <p>The central orchestration logic that triggers dual-model calls, applies the Prompt Optimizer, and invokes the Judge Model.</p>
-                <div class="badge">autonomous_compare_runner.py</div>
+          <div class="detail-box">
+            <h4 id="detail-title">Start with any node</h4>
+            <div class="muted" id="detail-body">
+              This file is intentionally comprehensive and interactive. The repo strongly supports the core orchestration architecture, while a few platform layers still look absent or external to the current snapshot.
             </div>
-            <div class="node">
-                <span class="node-tag">Output</span>
-                <h3>Artifact Generation</h3>
-                <p>Final response stitching and HTML file export for local/browser viewing.</p>
-                <div class="badge">/outputs/*.html</div>
+            <div class="detail-tag-row" id="detail-tags">
+              <div class="tag">Interactive explorer</div>
+              <div class="tag">Comprehensive first cut</div>
+              <div class="tag">Single HTML artifact</div>
             </div>
-        </div>
-    </div>
+          </div>
 
-    <div id="runtime" class="tab-content">
-        <div class="node">
-            <h3>Iteration Request Lifecycle</h3>
-            <ol>
-                <li><strong>Ingestion:</strong> Prompt + Files received via <code>/run-with-files</code>.</li>
-                <li><strong>Optimization:</strong> System applies <code>FORCE_OPTIMIZER_OFF</code> check and triggers prompt refinement.</li>
-                <li><strong>Competitive Execution:</strong> Parallel calls to <strong>OpenAI GPT-4o</strong> and <strong>Claude 3.5 Sonnet</strong>.</li>
-                <li><strong>The Judge Decision:</strong> OpenAI-based judge scores both outputs on clarity, completeness, and tone.</li>
-                <li><strong>Branching Logic:</strong>
-                    <ul>
-                        <li><code>accept</code>: Finalizes the workflow.</li>
-                        <li><code>revise_prompt_and_rerun</code>: Triggers next iteration loop.</li>
-                        <li><code>follow_up_on_winner</code>: Deep-dives into the winning response.</li>
-                    </ul>
-                </li>
-                <li><strong>Finalization:</strong> Optional <code>stitching</code> of multi-turn history into a single cohesive artifact.</li>
-            </ol>
-        </div>
-    </div>
-
-    <div id="tech" class="tab-content">
-        <div class="node">
-            <h3>Environment & Dependencies</h3>
-            <ul class="stack-list">
-                <li><span>Web Framework</span> <span class="badge">FastAPI / Uvicorn</span></li>
-                <li><span>Model A (Primary)</span> <span class="badge">OpenAI (gpt-4.1-mini)</span></li>
-                <li><span>Model B (Challenger)</span> <span class="badge">Anthropic (claude-sonnet-4-6)</span></li>
-                <li><span>Persistence</span> <span class="badge">Redis (redis-py)</span></li>
-                <li><span>Client Side</span> <span class="badge">Pure HTML5 / Vanilla JS</span></li>
-                <li><span>Security</span> <span class="badge">python-dotenv / Truststore</span></li>
+          <div class="mini-panel detail-box">
+            <h4>Quick reading guide</h4>
+            <ul>
+              <li><strong>System Overview</strong> for the broad architecture story.</li>
+              <li><strong>Request Lifecycle</strong> for how requests actually move today.</li>
+              <li><strong>Model Orchestration</strong> for the engine internals.</li>
+              <li><strong>State, Hosting & Repo Gaps</strong> for what's present versus missing.</li>
             </ul>
-        </div>
-    </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
 
-    <div class="legend">
-        <strong>SC Architect Note:</strong> This architecture is optimized for high-trust executive demos. It utilizes a "competitive grounding" approach where the judge model acts as an internal quality controller before any artifact is presented to the user.
-    </div>
-</div>
+  <script>
+    const tabs = document.querySelectorAll('.tab');
+    const panels = {
+      overview: document.getElementById('tab-overview'),
+      lifecycle: document.getElementById('tab-lifecycle'),
+      orchestration: document.getElementById('tab-orchestration'),
+      deployment: document.getElementById('tab-deployment')
+    };
 
-<script>
-    function showTab(tabId) {
-        // Update Buttons
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        event.currentTarget.classList.add('active');
-
-        // Update Content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        document.getElementById(tabId).classList.add('active');
+    function syncInspectorHeight(){
+      const activePanel = document.querySelector('.tab-panel:not(.hidden)');
+      const inspector = document.querySelector('.inspector');
+      if(!activePanel || !inspector) return;
+      inspector.style.setProperty('--inspector-min-height', activePanel.offsetHeight + 'px');
     }
-</script>
 
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        const key = btn.dataset.tab;
+        Object.entries(panels).forEach(([k,p]) => {
+          p.classList.toggle('hidden', k !== key);
+        });
+        document.querySelectorAll('.node,.step,.path-step,.matrix-card').forEach(el => el.classList.remove('active'));
+        requestAnimationFrame(syncInspectorHeight);
+      });
+    });
+
+    const detailTitle = document.getElementById('detail-title');
+    const detailBody = document.getElementById('detail-body');
+    const detailTags = document.getElementById('detail-tags');
+
+    function activateDetail(el){
+      document.querySelectorAll('.node,.step,.path-step,.matrix-card').forEach(n => n.classList.remove('active'));
+      el.classList.add('active');
+      detailTitle.textContent = el.dataset.title || 'Architecture node';
+      detailBody.textContent = el.dataset.body || '';
+      detailTags.innerHTML = '';
+      const tags = (el.dataset.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+      if(!tags.length){
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.textContent = 'Architecture detail';
+        detailTags.appendChild(tag);
+      } else {
+        tags.forEach(t => {
+          const tag = document.createElement('div');
+          tag.className = 'tag';
+          tag.textContent = t;
+          detailTags.appendChild(tag);
+        });
+      }
+    }
+
+    document.querySelectorAll('.node,.step,.path-step,.matrix-card').forEach(el => {
+      el.addEventListener('click', () => activateDetail(el));
+    });
+
+    window.addEventListener('load', syncInspectorHeight);
+    window.addEventListener('resize', () => {
+      const inspector = document.querySelector('.inspector');
+      if (window.innerWidth <= 1120) {
+        if (inspector) inspector.style.removeProperty('--inspector-min-height');
+      } else {
+        syncInspectorHeight();
+      }
+    });
+  </script>
 </body>
 </html>
