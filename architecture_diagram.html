@@ -548,6 +548,207 @@
     }
   </style>
 
+
+  <style id="mobile-ux-enhancements">
+    /* Desktop keeps current structure. Improve active states globally. */
+    .node, .step, .path-step, .matrix-card {
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .node::before, .step::before, .path-step::before, .matrix-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .18s ease;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+    .node:hover::before, .step:hover::before, .path-step:hover::before, .matrix-card:hover::before {
+      opacity: 1;
+    }
+
+    .node.active, .step.active, .path-step.active, .matrix-card.active {
+      outline: 2px solid rgba(79,127,240,.85) !important;
+      border-color: rgba(79,127,240,.65) !important;
+      box-shadow: 0 18px 34px rgba(79,127,240,.18), 0 16px 28px rgba(26,35,74,.18) !important;
+      transform: translateY(-2px);
+    }
+
+    .node .tap-hint, .step .tap-hint, .path-step .tap-hint, .matrix-card .tap-hint {
+      display: none;
+    }
+
+    /* Mobile bottom sheet */
+    .mobile-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 16, 32, .38);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .22s ease;
+      z-index: 90;
+    }
+
+    .mobile-sheet {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 10px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #F5F8FE 100%);
+      border: 1px solid #C8D2E9;
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(26,35,74,.22);
+      transform: translateY(calc(100% + 24px));
+      opacity: 0;
+      pointer-events: none;
+      transition: transform .26s ease, opacity .22s ease;
+      z-index: 100;
+      max-height: 78vh;
+      overflow: hidden;
+    }
+
+    .mobile-sheet.open {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-sheet-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-sheet-handle {
+      width: 54px;
+      height: 5px;
+      border-radius: 999px;
+      background: #CAD3E8;
+      margin: 10px auto 0;
+    }
+
+    .mobile-sheet-close {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      width: 34px;
+      height: 34px;
+      border: 1px solid #D0D8EB;
+      border-radius: 999px;
+      background: #FFFFFF;
+      color: #36476A;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(26,35,74,.08);
+    }
+
+    .mobile-sheet-content {
+      padding: 10px 16px 18px;
+      overflow: auto;
+      max-height: calc(78vh - 24px);
+    }
+
+    .mobile-sheet-content h3 {
+      margin: 4px 36px 10px 0;
+      color: #1A234A;
+      font-size: 20px;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+    }
+
+    .mobile-sheet-body {
+      color: #5A6683;
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .mobile-sheet-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .mobile-sheet-tag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid #C8D2E9;
+      background: #FFFFFF;
+      color: #5A6683;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 4px 10px rgba(26,35,74,.04);
+    }
+
+    body.sheet-open {
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    @media (max-width: 1120px) {
+      .inspector {
+        display: none !important;
+      }
+      .content-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .node .tap-hint, .step .tap-hint, .path-step .tap-hint, .matrix-card .tap-hint {
+        display: inline-flex;
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        padding: 5px 8px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.10);
+        color: rgba(246,248,255,.84);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .02em;
+        border: 1px solid rgba(255,255,255,.08);
+        box-shadow: 0 6px 14px rgba(0,0,0,.10);
+      }
+
+      .matrix-card .tap-hint {
+        background: rgba(26,35,74,.06);
+        color: #4F5878;
+        border-color: #D2D9EA;
+        box-shadow: 0 6px 14px rgba(26,35,74,.04);
+      }
+
+      .mobile-sheet {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        border-radius: 18px;
+      }
+
+      .mobile-sheet-content {
+        padding: 8px 14px 16px;
+      }
+
+      .mobile-sheet-content h3 {
+        font-size: 18px;
+      }
+
+      .mobile-sheet-body {
+        font-size: 14px;
+      }
+    }
+
+    @media (min-width: 1121px) {
+      .mobile-sheet,
+      .mobile-sheet-backdrop {
+        display: none !important;
+      }
+    }
+  </style>
+
 </head>
 <body>
   <div class="app">
@@ -620,7 +821,7 @@
                 <div class="node accent-blue" data-title="Custom HTML frontend" data-body="The current browser UI is a standalone HTML application that lets the user enter a prompt, choose max iterations, attach files, and review status, logs, artifacts, summary, and full output. It renders selected files client-side and posts FormData to the backend." data-tags="UI,HTML,Client,Prompt entry">
                   <small>Interface</small><strong>Custom HTML frontend</strong>
                   <span>Prompt entry, file attach, run trigger, result display.</span>
-                  <div class="corner">UI</div>
+                  <div class="corner">UI</div><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-blue" data-title="Solution consultant interaction model" data-body="This repo implies a self-serve workflow for consultants and technical stakeholders: enter a business task, optionally attach materials, run the workflow, inspect comparative output and artifacts, then reuse/share the results." data-tags="Users,SCs,Stakeholders">
                   <small>Audience</small><strong>Solution consultant interaction model</strong>
@@ -640,7 +841,7 @@
                 </div>
                 <div class="node accent-violet" data-title="Direct execution path" data-body="The browser UI currently calls /run-with-files directly. That endpoint reads uploaded files, decodes text where possible, injects a structured attached-files context block into the prompt, and invokes the orchestration runner synchronously for the response payload." data-tags="Current UX,FormData,Direct path">
                   <small>Current path</small><strong>Direct execution path</strong>
-                  <span>UI → /run-with-files → runner → immediate response JSON.</span>
+                  <span>UI → /run-with-files → runner → immediate response JSON.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-violet" data-title="Queued job path" data-body="The app also supports a background style path via /run. It creates a job, persists it in Redis, spawns a thread to process it, and lets consumers poll /status/{job_id}. This is important architecturally even though the current UI does not appear to use it yet." data-tags="Queued jobs,Background thread,Polling">
                   <small>Async-capable path</small><strong>Queued job path</strong>
@@ -655,11 +856,11 @@
                 </div>
                 <div class="node accent-cyan" data-title="Attachment context injection" data-body="Uploaded files are read server-side. Text files are decoded as UTF-8 or Latin-1, otherwise marked unsupported. Up to 20,000 characters per file are appended into a structured ATTACHED FILES CONTEXT block that becomes part of the final prompt sent into orchestration." data-tags="Files,Context injection,Prompt packaging">
                   <small>Pre-processing</small><strong>Attachment context injection</strong>
-                  <span>Repo-supported grounding from uploaded text content.</span>
+                  <span>Repo-supported grounding from uploaded text content.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-cyan" data-title="Prompt optimizer layer" data-body="The orchestration engine includes a prompt optimization stage that can run through OpenAI, Claude, or compare both. It evaluates prompts for clarity, specificity, structure, efficiency, and creativity control, then selects an optimized active prompt." data-tags="Optimizer,OpenAI,Claude,compare_both">
                   <small>Pre-model intelligence</small><strong>Prompt optimizer layer</strong>
-                  <span>Single-provider or compare_both optimization strategies.</span>
+                  <span>Single-provider or compare_both optimization strategies.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-cyan" data-title="Current optimizer reality" data-body="There is also an important current-state caveat: both the backend app and runner include debug flags that force the optimizer off. Architecturally the layer exists and is substantial, but operationally it may currently be disabled while debugging." data-tags="Current-state caveat,FORCE_DISABLE_OPTIMIZER">
                   <small>Reality check</small><strong>Optimizer currently appears forced off</strong>
@@ -674,11 +875,11 @@
                 </div>
                 <div class="node accent-green" data-title="OpenAI execution path" data-body="OpenAI is called via the Responses API. The initial call stores output_text plus response_id. Follow-up turns can continue the conversation using previous_response_id, enabling continuation handling and iterative refinement." data-tags="OpenAI,Responses API,previous_response_id">
                   <small>Provider path A</small><strong>OpenAI execution path</strong>
-                  <span>Initial + follow-up conversation state support.</span>
+                  <span>Initial + follow-up conversation state support.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-green" data-title="Anthropic Claude execution path" data-body="Claude is called through anthropic.messages.create with a rolling messages array. The orchestration stores assistant text and preserves conversation state for follow-up and continuation handling." data-tags="Claude,Anthropic,messages API">
                   <small>Provider path B</small><strong>Claude execution path</strong>
-                  <span>Parallel peer path to OpenAI with retained chat state.</span>
+                  <span>Parallel peer path to OpenAI with retained chat state.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-green" data-title="Parallelism" data-body="OpenAI and Claude initial calls run in parallel through a ThreadPoolExecutor with max_workers=2. The judge only executes after both results return, making parallelism a central runtime characteristic of the design." data-tags="Parallelism,ThreadPoolExecutor,Latency">
                   <small>Runtime behavior</small><strong>Parallel execution</strong>
@@ -693,11 +894,11 @@
                 </div>
                 <div class="node accent-amber" data-title="Judge model" data-body="A structured judge step scores OpenAI and Claude across clarity, completeness, practical usefulness, tone appropriateness, and overall strength. It chooses a winner and a next action: accept, revise_prompt_and_rerun, or follow_up_on_winner." data-tags="Judge,Scorecard,Decision schema">
                   <small>Decisioning</small><strong>Judge model</strong>
-                  <span>Structured scoring and action selection.</span>
+                  <span>Structured scoring and action selection.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-amber" data-title="Continuation handling" data-body="If the winning path is incomplete, the system issues follow-up prompts to the chosen provider. It can continue multiple times until the answer appears complete or the continuation attempt ceiling is hit." data-tags="Continuation,Completion,Follow-up">
                   <small>Refinement</small><strong>Continuation handling</strong>
-                  <span>Protects against cut-off or partial responses.</span>
+                  <span>Protects against cut-off or partial responses.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-amber" data-title="Stitching" data-body="If a provider answer required a continuation, the system can run a stitching pass that merges the original answer and the continuation into a single cleaned final output, removing duplication and cut-off fragments." data-tags="Stitching,Cleanup,Final response">
                   <small>Finalization</small><strong>Stitching pass</strong>
@@ -712,15 +913,15 @@
                 </div>
                 <div class="node accent-rose" data-title="Redis-backed job state" data-body="The queued path persists job state in Redis. Each job tracks status, stage, request details, model result states, artifacts, final output, and errors. /status/{job_id} returns that live job object." data-tags="Redis,Job status,Polling">
                   <small>Persistence</small><strong>Redis-backed job state</strong>
-                  <span>Queued workflow state, staged results, artifact pointers.</span>
+                  <span>Queued workflow state, staged results, artifact pointers.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-rose" data-title="Artifact generation" data-body="After orchestration completes, the runner saves both HTML and JSON outputs into an outputs directory. The FastAPI app mounts /outputs as static files, making artifacts directly retrievable from the hosted app." data-tags="Artifacts,HTML,JSON,/outputs">
                   <small>Output</small><strong>Artifact generation</strong>
-                  <span>Saved run reports plus machine-readable execution record.</span>
+                  <span>Saved run reports plus machine-readable execution record.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-rose" data-title="Traceable final payload" data-body="The direct execution path returns status, summary, full_output, artifact links, logs, runtime_seconds, and error details. That makes the UI both an execution console and a result review surface." data-tags="Result payload,Logs,Runtime">
                   <small>Delivery</small><strong>Traceable final payload</strong>
-                  <span>Outcome, logs, runtime, and artifact links in one response.</span>
+                  <span>Outcome, logs, runtime, and artifact links in one response.</span><div class="tap-hint">Tap for details</div>
                 </div>
               </div>
             </div>
@@ -746,22 +947,22 @@
 
                 <div class="h-flow">
                   <div class="step" data-title="1. Prompt + files entered" data-body="The user enters a prompt, chooses max iterations, optionally uploads multiple files, and clicks Run workflow from the custom HTML UI." data-tags="UI,Input">
-                    <small>Step 1</small><strong>Prompt + files entered</strong><span>User prepares the request in-browser.</span>
+                    <small>Step 1</small><strong>Prompt + files entered</strong><span>User prepares the request in-browser.</span><div class="tap-hint">Tap for details</div>
                   </div>
                   <div class="step" data-title="2. FormData sent to /run-with-files" data-body="The UI packages prompt, max_iterations, user_id, and files into multipart FormData and POSTs to /run-with-files." data-tags="FormData,/run-with-files">
-                    <small>Step 2</small><strong>POST /run-with-files</strong><span>Browser sends one combined request.</span>
+                    <small>Step 2</small><strong>POST /run-with-files</strong><span>Browser sends one combined request.</span><div class="tap-hint">Tap for details</div>
                   </div>
                   <div class="step" data-title="3. Files decoded and injected" data-body="The backend reads each uploaded file, attempts text decoding, builds structured file payloads, and appends them to the prompt as ATTACHED FILES CONTEXT." data-tags="Decode,Context injection">
-                    <small>Step 3</small><strong>Decode + inject context</strong><span>Supporting materials become prompt context.</span>
+                    <small>Step 3</small><strong>Decode + inject context</strong><span>Supporting materials become prompt context.</span><div class="tap-hint">Tap for details</div>
                   </div>
                   <div class="step" data-title="4. run_autonomous_compare invoked" data-body="The app invokes run_autonomous_compare directly with the combined prompt, user_id, max_iterations, and built runner options." data-tags="Runner,Execution">
-                    <small>Step 4</small><strong>Invoke orchestration runner</strong><span>Direct request/response execution path.</span>
+                    <small>Step 4</small><strong>Invoke orchestration runner</strong><span>Direct request/response execution path.</span><div class="tap-hint">Tap for details</div>
                   </div>
                   <div class="step" data-title="5. Orchestration completes" data-body="The runner executes optimization logic, parallel model calls, judging, follow-up or stitching as needed, final output extraction, and output saving." data-tags="Orchestration,Judge,Stitching">
-                    <small>Step 5</small><strong>Complete orchestration</strong><span>Models, judge, and finalization run.</span>
+                    <small>Step 5</small><strong>Complete orchestration</strong><span>Models, judge, and finalization run.</span><div class="tap-hint">Tap for details</div>
                   </div>
                   <div class="step" data-title="6. HTML/JSON artifacts written" data-body="The runner writes HTML and JSON artifact files into outputs and returns their relative paths." data-tags="Artifacts,outputs">
-                    <small>Step 6</small><strong>Save outputs</strong><span>Run report and execution JSON are generated.</span>
+                    <small>Step 6</small><strong>Save outputs</strong><span>Run report and execution JSON are generated.</span><div class="tap-hint">Tap for details</div>
                   </div>
                   <div class="step" data-title="7. UI renders result" data-body="The UI receives summary, full_output, runtime, logs, and artifact links, then renders them in the latest response panel." data-tags="UI render,Results">
                     <small>Step 7</small><strong>Render result in UI</strong><span>Single response refreshes the screen.</span>
@@ -832,7 +1033,7 @@
                   <h3>Initialization</h3>
                 </div>
                 <div class="node accent-blue" data-title="Configuration and clients" data-body="The runner loads environment variables for model names, tokens, timeouts, optimization defaults, stitching defaults, and API keys. It initializes OpenAI and Anthropic clients up front." data-tags="Env,Clients,Config">
-                  <small>Config</small><strong>Configuration + API clients</strong><span>Models, timeouts, keys, defaults.</span>
+                  <small>Config</small><strong>Configuration + API clients</strong><span>Models, timeouts, keys, defaults.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-blue" data-title="Logging envelope" data-body="A log list is created and populated through run_step wrappers. Each step records START / DONE / FAIL and duration, which later feeds the response payload and queued job state mapping." data-tags="Logging,run_step">
                   <small>Observability</small><strong>Step-wrapped logging</strong><span>Traceable execution chronology.</span>
@@ -845,7 +1046,7 @@
                   <h3>Prompt preparation</h3>
                 </div>
                 <div class="node accent-cyan" data-title="Optimize prompt" data-body="optimize_prompt can run as compare_both, single_openai, or single_claude. It returns optimized_prompt, explanation, variants, provider metadata, and optional selection rationale." data-tags="Prompt optimization,compare_both">
-                  <small>Preparation</small><strong>Optimize prompt</strong><span>Transforms original prompt into active prompt.</span>
+                  <small>Preparation</small><strong>Optimize prompt</strong><span>Transforms original prompt into active prompt.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-cyan" data-title="Active prompt established" data-body="The workflow strips and validates the optimized prompt, then begins autonomous loop iterations against that active prompt." data-tags="Active prompt">
                   <small>Preparation</small><strong>Establish active prompt</strong><span>Single canonical prompt for execution.</span>
@@ -858,7 +1059,7 @@
                   <h3>Parallel execution</h3>
                 </div>
                 <div class="node accent-green" data-title="OpenAI initial" data-body="OpenAI initial call produces ProviderResult with provider, model, prompt, text, error, and response_id. That response_id becomes the anchor for future follow-up turns if OpenAI wins." data-tags="OpenAI,ProviderResult">
-                  <small>Provider A</small><strong>OpenAI initial call</strong><span>Responses API + response state tracking.</span>
+                  <small>Provider A</small><strong>OpenAI initial call</strong><span>Responses API + response state tracking.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-green" data-title="Claude initial" data-body="Claude initial call produces ProviderResult with provider, model, prompt, text, error, and response_id. Message history is retained in ClaudeChatState for follow-up turns if Claude wins." data-tags="Claude,ClaudeChatState">
                   <small>Provider B</small><strong>Claude initial call</strong><span>Messages API + rolling message state.</span>
@@ -871,7 +1072,7 @@
                   <h3>Judge-driven control</h3>
                 </div>
                 <div class="node accent-amber" data-title="Structured judge decision" data-body="judge_outputs returns a structured decision payload: winner, next_action, reason, revised_prompt, follow_up_prompt, rerun_target, confidence, and both scorecards. A safe fallback judge exists if structured judging fails." data-tags="JudgeDecision,JSON schema">
-                  <small>Decision</small><strong>Structured judge decision</strong><span>Winner + scorecards + next action.</span>
+                  <small>Decision</small><strong>Structured judge decision</strong><span>Winner + scorecards + next action.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-amber" data-title="Action branching" data-body="The loop branches into accept, revise_prompt_and_rerun, or follow_up_on_winner. If rerun_target is Both, the active prompt is revised and the loop continues." data-tags="Branching,Rerun,Both">
                   <small>Control logic</small><strong>Action branching</strong><span>Accept, rerun, or follow-up.</span>
@@ -884,7 +1085,7 @@
                   <h3>Refinement & save</h3>
                 </div>
                 <div class="node accent-rose" data-title="Continuation and stitching" data-body="If follow_up_on_winner is chosen, the selected provider gets a continuation prompt. Multiple continuation attempts may occur. If stitching is enabled, a final cleanup pass merges the original and continuation into one final response." data-tags="Continuation,Stitching">
-                  <small>Finalization</small><strong>Continuation + stitching</strong><span>Recovers incomplete winning answers.</span>
+                  <small>Finalization</small><strong>Continuation + stitching</strong><span>Recovers incomplete winning answers.</span><div class="tap-hint">Tap for details</div>
                 </div>
                 <div class="node accent-rose" data-title="Final output extraction and save_outputs" data-body="The workflow chooses the final answer from stitched_result, post_action_result, or winning provider output, then writes HTML and JSON output artifacts and returns a user-facing success payload." data-tags="save_outputs,final_output,HTML,JSON">
                   <small>Delivery</small><strong>Final output extraction + save</strong><span>Artifact files plus final response payload.</span>
@@ -924,30 +1125,30 @@
 
             <div class="matrix">
               <div class="matrix-card" data-title="Visible in repo: Hosting-ready app shape" data-body="The current repo has a hosted-web-app shape: FastAPI app, static outputs mount, custom browser UI, environment-based secrets, Redis-backed job state, and downloadable artifacts. The previous architecture file also explicitly references Render-hosted deployment intent." data-tags="Hosting,FastAPI,Render">
-                <small>Present now</small><strong>Hosting-ready app shape</strong><span>FastAPI + UI + outputs + secrets-driven config.</span>
+                <small>Present now</small><strong>Hosting-ready app shape</strong><span>FastAPI + UI + outputs + secrets-driven config.</span><div class="tap-hint">Tap for details</div>
               </div>
               <div class="matrix-card" data-title="Visible in repo: Redis as state spine" data-body="Redis is used for job persistence and status retrieval in the queued path. Job data includes stage, timestamps, request payload, provider statuses, artifacts, and final output." data-tags="Redis,Jobs,Status">
-                <small>Present now</small><strong>Redis as state spine</strong><span>Job_id, polling, stateful execution tracking.</span>
+                <small>Present now</small><strong>Redis as state spine</strong><span>Job_id, polling, stateful execution tracking.</span><div class="tap-hint">Tap for details</div>
               </div>
               <div class="matrix-card" data-title="Visible in repo: Artifacts as first-class outputs" data-body="HTML and JSON artifacts are intentionally generated on every successful run and exposed through a static mount, making the architecture naturally shareable and reviewable." data-tags="Artifacts,Sharing,Traceability">
                 <small>Present now</small><strong>Artifact-first design</strong><span>Outputs are review surfaces, not just side effects.</span>
               </div>
 
               <div class="matrix-card" data-title="Not clearly present: deployment manifests" data-body="This repo snapshot does not appear to include Dockerfile, render.yaml, Procfile, Terraform, Kubernetes manifests, or CI/CD workflow definitions. Hosting intent is visible, but deployment topology is not fully codified here." data-tags="Missing,Docker,Render config,CI/CD">
-                <small>Missing / unclear</small><strong>Deployment manifests</strong><span>Hosting intent is visible; infra-as-code is not.</span>
+                <small>Missing / unclear</small><strong>Deployment manifests</strong><span>Hosting intent is visible; infra-as-code is not.</span><div class="tap-hint">Tap for details</div>
               </div>
               <div class="matrix-card" data-title="Not clearly present: dedicated worker separation" data-body="The queued execution path uses an in-process Python thread. There is no visible separate worker service, job queue broker beyond Redis storage, or horizontally separated executor tier in this repo snapshot." data-tags="Missing,Worker tier,Queue architecture">
-                <small>Missing / unclear</small><strong>Dedicated worker separation</strong><span>Queued pattern exists, but not a separate worker service.</span>
+                <small>Missing / unclear</small><strong>Dedicated worker separation</strong><span>Queued pattern exists, but not a separate worker service.</span><div class="tap-hint">Tap for details</div>
               </div>
               <div class="matrix-card" data-title="Not clearly present: auth, access, tenancy" data-body="No auth middleware, login system, API authorization, stakeholder access controls, or multi-tenant boundaries are obvious in the current repo snapshot." data-tags="Missing,Auth,Access control">
                 <small>Missing / unclear</small><strong>Auth & access control</strong><span>Useful for leadership sharing later if broadened.</span>
               </div>
 
               <div class="matrix-card" data-title="Not clearly present: rich file parsing pipeline" data-body="The current upload path decodes text and labels unsupported/binary content when decoding fails. There is no visible OCR pipeline, PDF parser, DOCX parser, spreadsheet parser, vector store, or retrieval layer." data-tags="Missing,Parsers,RAG">
-                <small>Missing / unclear</small><strong>Rich file parsing pipeline</strong><span>Current file support appears text-first.</span>
+                <small>Missing / unclear</small><strong>Rich file parsing pipeline</strong><span>Current file support appears text-first.</span><div class="tap-hint">Tap for details</div>
               </div>
               <div class="matrix-card" data-title="Not clearly present: long-term run history and analytics" data-body="Artifacts and job status exist, but there is no visible run catalog UI, analytics store, audit dashboard, model cost telemetry, or experiment history browser in this repo snapshot." data-tags="Missing,Analytics,History,Observability">
-                <small>Missing / unclear</small><strong>Run history & analytics</strong><span>Great future layer if you want leadership visibility.</span>
+                <small>Missing / unclear</small><strong>Run history & analytics</strong><span>Great future layer if you want leadership visibility.</span><div class="tap-hint">Tap for details</div>
               </div>
               <div class="matrix-card" data-title="Not clearly present: external knowledge integration" data-body="This repo focuses on prompt execution and uploaded context. It does not visibly include CRM, knowledge base, document store, Slack, Salesforce, or demo asset integrations yet." data-tags="Missing,Integrations,Knowledge sources">
                 <small>Missing / unclear</small><strong>Knowledge integrations</strong><span>Natural next expansion if you scale the tool.</span>
@@ -1085,5 +1286,135 @@
       }
     });
   </script>
+
+  <div class="mobile-sheet-backdrop" id="mobileSheetBackdrop" aria-hidden="true"></div>
+  <div class="mobile-sheet" id="mobileSheet" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="mobileSheetTitle">
+    <div class="mobile-sheet-handle"></div>
+    <button class="mobile-sheet-close" id="mobileSheetClose" aria-label="Close details">×</button>
+    <div class="mobile-sheet-content">
+      <h3 id="mobileSheetTitle">Node details</h3>
+      <div class="mobile-sheet-body" id="mobileSheetBody">Tap any architecture block to view details.</div>
+      <div class="mobile-sheet-tags" id="mobileSheetTags"></div>
+    </div>
+  </div>
+
+
+  <script id="mobile-ux-script">
+    (function(){
+      const clickableSelector = '.node,.step,.path-step,.matrix-card';
+      const mobileSheet = document.getElementById('mobileSheet');
+      const mobileSheetBackdrop = document.getElementById('mobileSheetBackdrop');
+      const mobileSheetClose = document.getElementById('mobileSheetClose');
+      const mobileSheetTitle = document.getElementById('mobileSheetTitle');
+      const mobileSheetBody = document.getElementById('mobileSheetBody');
+      const mobileSheetTags = document.getElementById('mobileSheetTags');
+
+      function isMobileInspectorMode(){
+        return window.innerWidth <= 1120;
+      }
+
+      function ensureTapHints(){
+        if (window.innerWidth > 760) return;
+        document.querySelectorAll(clickableSelector).forEach(el => {
+          if (!el.querySelector('.tap-hint')) {
+            const hint = document.createElement('div');
+            hint.className = 'tap-hint';
+            hint.textContent = 'Tap for details';
+            el.appendChild(hint);
+          }
+        });
+      }
+
+      function populateSheet(el){
+        const title = el.dataset.title || 'Node details';
+        const body = el.dataset.body || '';
+        const tags = (el.dataset.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+        mobileSheetTitle.textContent = title;
+        mobileSheetBody.textContent = body;
+        mobileSheetTags.innerHTML = '';
+
+        if (tags.length) {
+          tags.forEach(tagText => {
+            const tag = document.createElement('div');
+            tag.className = 'mobile-sheet-tag';
+            tag.textContent = tagText;
+            mobileSheetTags.appendChild(tag);
+          });
+        }
+      }
+
+      function openSheet(el){
+        populateSheet(el);
+        mobileSheet.classList.add('open');
+        mobileSheetBackdrop.classList.add('open');
+        mobileSheet.setAttribute('aria-hidden', 'false');
+        mobileSheetBackdrop.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('sheet-open');
+      }
+
+      function closeSheet(){
+        mobileSheet.classList.remove('open');
+        mobileSheetBackdrop.classList.remove('open');
+        mobileSheet.setAttribute('aria-hidden', 'true');
+        mobileSheetBackdrop.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('sheet-open');
+      }
+
+      if (mobileSheetClose) mobileSheetClose.addEventListener('click', closeSheet);
+      if (mobileSheetBackdrop) mobileSheetBackdrop.addEventListener('click', closeSheet);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeSheet();
+      });
+
+      // swipe down to dismiss feel
+      let startY = null;
+      let currentY = null;
+      if (mobileSheet) {
+        mobileSheet.addEventListener('touchstart', (e) => {
+          if (!mobileSheet.classList.contains('open')) return;
+          startY = e.touches[0].clientY;
+          currentY = startY;
+        }, {passive: true});
+
+        mobileSheet.addEventListener('touchmove', (e) => {
+          if (startY === null) return;
+          currentY = e.touches[0].clientY;
+          const delta = Math.max(0, currentY - startY);
+          if (delta > 0) {
+            mobileSheet.style.transform = 'translateY(' + Math.min(delta, 180) + 'px)';
+          }
+        }, {passive: true});
+
+        mobileSheet.addEventListener('touchend', () => {
+          if (startY === null) return;
+          const delta = (currentY || startY) - startY;
+          mobileSheet.style.transform = '';
+          if (delta > 90) closeSheet();
+          startY = null;
+          currentY = null;
+        });
+      }
+
+      // Patch original activateDetail to also support mobile sheet behavior
+      document.querySelectorAll(clickableSelector).forEach(el => {
+        el.addEventListener('click', () => {
+          if (isMobileInspectorMode()) {
+            openSheet(el);
+          }
+        });
+      });
+
+      window.addEventListener('resize', () => {
+        ensureTapHints();
+        if (!isMobileInspectorMode()) {
+          closeSheet();
+        }
+      });
+
+      window.addEventListener('load', ensureTapHints);
+    })();
+  </script>
+
 </body>
 </html>
