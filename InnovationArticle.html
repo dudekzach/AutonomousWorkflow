@@ -934,10 +934,3 @@ body.reading-mode .reading-toggle { background: #2a2820; }
 </script>
 </body>
 </html>"""
-
-HTML = HTML.replace('HEADSHOT_SRC', IMG)
-
-with open('/mnt/user-data/outputs/index.html', 'w') as f:
-    f.write(HTML)
-
-print('Done. Size:', len(HTML))
