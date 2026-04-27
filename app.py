@@ -32,14 +32,10 @@ app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 FORCE_OPTIMIZER_OFF = True
 
 REDIS_URL = os.getenv("REDIS_URL")
-redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+if not REDIS_URL:
+    raise ValueError("Missing REDIS_URL environment variable")
 
-# Redis setup
-REDIS_URL = os.getenv("REDIS_URL")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-
-# Temporary in-memory job store
-# Later this can be replaced with Redis
 
 
 class RunRequest(BaseModel):
@@ -47,6 +43,20 @@ class RunRequest(BaseModel):
     max_iterations: int = 3
     user_id: Optional[str] = None
     options: Optional[Dict[str, Any]] = None
+
+
+STAGE_PROGRESS = {
+    "queued": 0,
+    "starting": 5,
+    "optimizing_prompt": 15,
+    "running_models": 40,
+    "judging": 65,
+    "follow_up": 78,
+    "stitching": 88,
+    "saving_artifacts": 95,
+    "completed": 100,
+    "failed": 100,
+}
 
 
 def now_iso() -> str:
@@ -68,60 +78,118 @@ def get_job(job_id: str) -> Optional[Dict[str, Any]]:
     return json.loads(raw)
 
 
-def create_job(
-    prompt: str,
-    max_iterations: int = 3,
-    user_id: Optional[str] = None,
-    options: Optional[Dict[str, Any]] = None,
-) -> str:
-    job_id = str(uuid.uuid4())
+def build_step(status: str = "pending") -> Dict[str, Any]:
+    return {
+        "status": status,
+        "started_at": None,
+        "completed_at": None,
+        "latency_seconds": None,
+        "message": None,
+        "error": None,
+        "provider": None,
+        "model": None,
+        "attempts": 0,
+        "meta": {},
+    }
 
-    job_data = {
+
+def build_job_document(
+    job_id: str,
+    prompt: str,
+    max_iterations: int,
+    user_id: Optional[str],
+    options: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    opts = dict(options or {})
+    attached_filenames = opts.get("attached_filenames", [])
+
+    timestamp = now_iso()
+
+    return {
         "job_id": job_id,
         "status": "queued",
         "stage": "queued",
-        "created_at": now_iso(),
-        "updated_at": now_iso(),
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "started_at": None,
+        "completed_at": None,
         "request": {
             "prompt": prompt,
             "max_iterations": max_iterations,
             "user_id": user_id,
-            "options": options or {},
+            "options": opts,
+            "attached_filenames": attached_filenames,
         },
-        "results": {
-            "openai": {
-                "status": "pending",
-                "output": None,
-                "latency_seconds": None,
-                "error": None,
-            },
-            "claude": {
-                "status": "pending",
-                "output": None,
-                "latency_seconds": None,
-                "error": None,
-            },
-            "judge": {
-                "status": "pending",
-                "output": None,
-                "latency_seconds": None,
-                "error": None,
-            },
+        "progress": {
+            "current_step": "queued",
+            "percent": 0,
+            "message": "Job queued",
+            "steps_completed": 0,
+            "total_steps": 7,
         },
-        "runner_result": None,
-        "final_output": None,
+        "steps": {
+            "optimizer": build_step(),
+            "openai": build_step(),
+            "claude": build_step(),
+            "judge": build_step(),
+            "follow_up": build_step(),
+            "stitch": build_step(),
+            "artifacts": build_step(),
+        },
+        "iteration": {
+            "current": 0,
+            "max": max_iterations,
+            "history": [],
+        },
+        "summary": {
+            "winner": None,
+            "next_action": None,
+            "confidence": None,
+            "reason": None,
+        },
+        "outputs": {
+            "optimized_prompt": None,
+            "openai_output": None,
+            "claude_output": None,
+            "judge_output": None,
+            "follow_up_output": None,
+            "stitched_output": None,
+            "final_output": None,
+        },
         "artifacts": {
             "html_path": None,
             "json_path": None,
         },
+        "timing": {
+            "total_runtime_seconds": None,
+        },
+        "logs": [],
         "error": None,
+        "errors": [],
+        "display": {
+            "status_label": "Queued",
+            "stage_label": "Queued",
+            "can_poll": True,
+            "is_terminal": False,
+        },
     }
 
-    save_job(job_id, job_data)
-    return job_id
+
+def display_label(value: str) -> str:
+    return value.replace("_", " ").title() if value else ""
 
 
-def update_job(job_id: str, **fields: Any) -> None:
+def compute_display(status: str, stage: str) -> Dict[str, Any]:
+    is_terminal = status in {"completed", "failed", "completed_with_errors"}
+    return {
+        "status_label": display_label(status),
+        "stage_label": display_label(stage),
+        "can_poll": not is_terminal,
+        "is_terminal": is_terminal,
+    }
+
+
+def update_job_fields(job_id: str, **fields: Any) -> None:
     job = get_job(job_id)
     if not job:
         return
@@ -130,36 +198,179 @@ def update_job(job_id: str, **fields: Any) -> None:
         job[key] = value
 
     job["updated_at"] = now_iso()
+    job["display"] = compute_display(job.get("status", "queued"), job.get("stage", "queued"))
     save_job(job_id, job)
 
-def update_job_results(job_id: str, section: str, **fields: Any) -> None:
+
+def update_job_progress(
+    job_id: str,
+    *,
+    current_step: str,
+    percent: int,
+    message: str,
+    steps_completed: Optional[int] = None,
+) -> None:
     job = get_job(job_id)
     if not job:
         return
 
-    if "results" not in job:
-        job["results"] = {}
-
-    if section not in job["results"]:
-        job["results"][section] = {}
-
-    for key, value in fields.items():
-        job["results"][section][key] = value
+    progress = job.setdefault("progress", {})
+    progress["current_step"] = current_step
+    progress["percent"] = percent
+    progress["message"] = message
+    if steps_completed is not None:
+        progress["steps_completed"] = steps_completed
+    progress.setdefault("total_steps", 7)
 
     job["updated_at"] = now_iso()
     save_job(job_id, job)
-    
 
-def set_result_section(job: Dict[str, Any], section: str, **fields: Any) -> None:
-    if "results" not in job:
-        job["results"] = {}
 
-    if section not in job["results"]:
-        job["results"][section] = {}
+def set_job_stage(
+    job_id: str,
+    stage: str,
+    message: str,
+    steps_completed: Optional[int] = None,
+) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+
+    job["stage"] = stage
+    progress = job.setdefault("progress", {})
+    progress["current_step"] = stage
+    progress["percent"] = STAGE_PROGRESS.get(stage, 0)
+    progress["message"] = message
+    if steps_completed is not None:
+        progress["steps_completed"] = steps_completed
+    progress.setdefault("total_steps", 7)
+
+    job["updated_at"] = now_iso()
+    job["display"] = compute_display(job.get("status", "queued"), job.get("stage", "queued"))
+    save_job(job_id, job)
+
+
+def update_job_step(job_id: str, step_name: str, **fields: Any) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+
+    steps = job.setdefault("steps", {})
+    step = steps.setdefault(step_name, build_step())
 
     for key, value in fields.items():
-        job["results"][section][key] = value
-    
+        if key == "meta":
+            existing_meta = step.setdefault("meta", {})
+            if isinstance(existing_meta, dict) and isinstance(value, dict):
+                existing_meta.update(value)
+            else:
+                step["meta"] = value
+        else:
+            step[key] = value
+
+    job["updated_at"] = now_iso()
+    save_job(job_id, job)
+
+
+def append_job_log(job_id: str, message: str) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+
+    logs = job.setdefault("logs", [])
+    logs.append(message)
+
+    # Simple protection against unbounded growth.
+    if len(logs) > 500:
+        job["logs"] = logs[-500:]
+
+    job["updated_at"] = now_iso()
+    save_job(job_id, job)
+
+
+def set_job_output(job_id: str, output_name: str, value: Any) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+
+    outputs = job.setdefault("outputs", {})
+    outputs[output_name] = value
+
+    job["updated_at"] = now_iso()
+    save_job(job_id, job)
+
+
+def set_job_summary(job_id: str, **fields: Any) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+
+    summary = job.setdefault("summary", {})
+    for key, value in fields.items():
+        summary[key] = value
+
+    job["updated_at"] = now_iso()
+    save_job(job_id, job)
+
+
+def add_job_error(
+    job_id: str,
+    *,
+    code: str,
+    message: str,
+    step: str,
+    retryable: bool = False,
+) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+
+    errors = job.setdefault("errors", [])
+    errors.append(
+        {
+            "code": code,
+            "message": message,
+            "step": step,
+            "retryable": retryable,
+            "timestamp": now_iso(),
+        }
+    )
+
+    job["updated_at"] = now_iso()
+    save_job(job_id, job)
+
+
+def append_iteration_history(job_id: str, item: Dict[str, Any]) -> None:
+    job = get_job(job_id)
+    if not job:
+        return
+
+    iteration = job.setdefault("iteration", {"current": 0, "max": 0, "history": []})
+    history = iteration.setdefault("history", [])
+    history.append(item)
+    iteration["current"] = max(iteration.get("current", 0), int(item.get("iteration", 0) or 0))
+
+    job["updated_at"] = now_iso()
+    save_job(job_id, job)
+
+
+def create_job(
+    prompt: str,
+    max_iterations: int = 3,
+    user_id: Optional[str] = None,
+    options: Optional[Dict[str, Any]] = None,
+) -> str:
+    job_id = str(uuid.uuid4())
+    job_data = build_job_document(
+        job_id=job_id,
+        prompt=prompt,
+        max_iterations=max_iterations,
+        user_id=user_id,
+        options=options,
+    )
+    save_job(job_id, job_data)
+    return job_id
+
 
 def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     merged_options: Dict[str, Any] = dict(options or {})
@@ -187,87 +398,197 @@ def process_job(job_id: str) -> None:
     start_time = time.time()
     print(f"PROCESS_JOB: started job_id={job_id}", flush=True)
 
-    try:
-        update_job(job_id, status="running", stage="starting")
+    update_job_fields(
+        job_id,
+        status="running",
+        stage="starting",
+        started_at=now_iso(),
+        error=None,
+    )
+    set_job_stage(job_id, "starting", "Workflow is starting", steps_completed=0)
 
+    def status_callback(event: Dict[str, Any]) -> None:
+        event_type = event.get("type")
+
+        if event_type == "log":
+            append_job_log(job_id, event.get("message", ""))
+
+        elif event_type == "stage":
+            stage = event.get("stage", "starting")
+            message = event.get("message", display_label(stage))
+            steps_completed = event.get("steps_completed")
+            set_job_stage(job_id, stage, message, steps_completed)
+
+        elif event_type == "step_started":
+            update_job_step(
+                job_id,
+                event["step"],
+                status="running",
+                started_at=event.get("started_at", now_iso()),
+                completed_at=None,
+                latency_seconds=None,
+                message=event.get("message"),
+                error=None,
+                provider=event.get("provider"),
+                model=event.get("model"),
+                attempts=event.get("attempts", 1),
+                meta=event.get("meta", {}),
+            )
+
+        elif event_type == "step_completed":
+            update_job_step(
+                job_id,
+                event["step"],
+                status="completed",
+                completed_at=event.get("completed_at", now_iso()),
+                latency_seconds=event.get("latency_seconds"),
+                message=event.get("message"),
+                error=None,
+                provider=event.get("provider"),
+                model=event.get("model"),
+                attempts=event.get("attempts", 1),
+                meta=event.get("meta", {}),
+            )
+
+        elif event_type == "step_failed":
+            update_job_step(
+                job_id,
+                event["step"],
+                status="failed",
+                completed_at=event.get("completed_at", now_iso()),
+                latency_seconds=event.get("latency_seconds"),
+                message=event.get("message"),
+                error=event.get("error"),
+                provider=event.get("provider"),
+                model=event.get("model"),
+                attempts=event.get("attempts", 1),
+                meta=event.get("meta", {}),
+            )
+            add_job_error(
+                job_id,
+                code=event.get("code", "STEP_FAILED"),
+                message=event.get("error", "Unknown step failure"),
+                step=event["step"],
+                retryable=event.get("retryable", False),
+            )
+
+        elif event_type == "step_skipped":
+            update_job_step(
+                job_id,
+                event["step"],
+                status="skipped",
+                completed_at=event.get("completed_at", now_iso()),
+                message=event.get("message"),
+                meta=event.get("meta", {}),
+            )
+
+        elif event_type == "output":
+            set_job_output(job_id, event["name"], event.get("value"))
+
+        elif event_type == "summary":
+            value = event.get("value", {})
+            if isinstance(value, dict):
+                set_job_summary(job_id, **value)
+
+        elif event_type == "iteration":
+            value = event.get("value", {})
+            if isinstance(value, dict):
+                append_iteration_history(job_id, value)
+
+    try:
         prompt_length = len(prompt) if prompt else 0
         print(f"PROCESS_JOB: prompt length={prompt_length}", flush=True)
         print(f"PROCESS_JOB: max_iterations={max_iterations}", flush=True)
         print(f"PROCESS_JOB: user_id={user_id}", flush=True)
         print(f"PROCESS_JOB: options={options}", flush=True)
 
-        update_job(job_id, stage="calling_models")
-
         result = run_autonomous_compare(
             prompt=prompt,
             max_iterations=max_iterations,
             user_id=user_id,
             options=options,
+            status_callback=status_callback,
         )
 
         elapsed = time.time() - start_time
+
+        if result.get("logs"):
+            for line in result["logs"]:
+                append_job_log(job_id, line)
+
+        outputs = result.get("outputs", {})
+        if isinstance(outputs, dict):
+            for output_name, output_value in outputs.items():
+                set_job_output(job_id, output_name, output_value)
+
+        summary = result.get("summary", {})
+        if isinstance(summary, dict):
+            set_job_summary(job_id, **summary)
+
+        artifacts = result.get("artifacts", [])
+        html_path = None
+        json_path = None
+        if isinstance(artifacts, list):
+            for artifact in artifacts:
+                if not isinstance(artifact, dict):
+                    continue
+                artifact_type = artifact.get("type")
+                artifact_path = artifact.get("path")
+                if artifact_type == "html":
+                    html_path = artifact_path
+                elif artifact_type == "json":
+                    json_path = artifact_path
 
         job = get_job(job_id)
         if not job:
             print(f"PROCESS_JOB: job disappeared job_id={job_id}", flush=True)
             return
 
-        job["runner_result"] = result
-        
-        logs = result.get("logs", [])
-        runtime = result.get("runtime_seconds")
+        if html_path is not None:
+            job["artifacts"]["html_path"] = html_path
+        if json_path is not None:
+            job["artifacts"]["json_path"] = json_path
 
-        for line in logs:
-            if "DONE iteration_1_openai_initial" in line:
-                set_result_section(job, "openai", status="completed")
-            if "DONE iteration_1_claude_initial" in line:
-                set_result_section(job, "claude", status="completed")
-            if "START iteration_1_judge" in line:
-                job["stage"] = "judging"
-            if "DONE iteration_1_judge" in line:
-                set_result_section(job, "judge", status="completed")
+        runtime_seconds = result.get("runtime_seconds")
+        if runtime_seconds is None:
+            runtime_seconds = round(elapsed, 2)
+        job["timing"]["total_runtime_seconds"] = runtime_seconds
 
-        if runtime:
-            job["runtime_seconds"] = runtime
+        runner_status = result.get("status", "completed")
+        top_level_error = result.get("error")
 
-        job["final_output"] = (
-            result.get("final_output")
-            or result.get("full_output")
-            or result.get("output")
-            or result.get("response")
-            or result.get("best_response")
-        )
+        if runner_status == "completed":
+            job["status"] = "completed" if not job.get("errors") else "completed_with_errors"
+            job["stage"] = "completed"
+            job["completed_at"] = now_iso()
+            job["error"] = None
+            job["progress"] = {
+                "current_step": "completed",
+                "percent": 100,
+                "message": "Workflow completed successfully",
+                "steps_completed": 7,
+                "total_steps": 7,
+            }
+        else:
+            job["status"] = "failed"
+            job["stage"] = "failed"
+            job["completed_at"] = now_iso()
+            job["error"] = {
+                "code": "WORKFLOW_FAILED",
+                "message": top_level_error or "Workflow failed",
+                "step": job.get("stage", "failed"),
+                "retryable": False,
+            }
+            job["progress"] = {
+                "current_step": "failed",
+                "percent": 100,
+                "message": top_level_error or "Workflow failed",
+                "steps_completed": job.get("progress", {}).get("steps_completed", 0),
+                "total_steps": 7,
+            }
 
-        artifacts = result.get("artifacts", [])
-
-        if isinstance(artifacts, list):
-            for artifact in artifacts:
-                if not isinstance(artifact, dict):
-                    continue
-
-                artifact_type = artifact.get("type")
-                artifact_path = artifact.get("path")
-
-                if artifact_type == "html":
-                    job["artifacts"]["html_path"] = artifact_path
-                elif artifact_type == "json":
-                    job["artifacts"]["json_path"] = artifact_path
-
-        print(f"PROCESS_JOB: BASE_DIR={BASE_DIR}", flush=True)
-        print(f"PROCESS_JOB: OUTPUTS_DIR={OUTPUTS_DIR}", flush=True)
-        print(
-            f"PROCESS_JOB: extracted html_path={job['artifacts']['html_path']}",
-            flush=True,
-        )
-        print(
-            f"PROCESS_JOB: extracted json_path={job['artifacts']['json_path']}",
-            flush=True,
-        )
-
-        job["status"] = result.get("status", "completed")
-        job["stage"] = "completed"
         job["updated_at"] = now_iso()
-
+        job["display"] = compute_display(job.get("status", "queued"), job.get("stage", "queued"))
         save_job(job_id, job)
 
         print(
@@ -286,8 +607,32 @@ def process_job(job_id: str) -> None:
         if job:
             job["status"] = "failed"
             job["stage"] = "failed"
-            job["error"] = str(e)
+            job["completed_at"] = now_iso()
+            job["error"] = {
+                "code": "PROCESS_JOB_EXCEPTION",
+                "message": str(e),
+                "step": "process_job",
+                "retryable": False,
+            }
+            job.setdefault("errors", []).append(
+                {
+                    "code": "PROCESS_JOB_EXCEPTION",
+                    "message": str(e),
+                    "step": "process_job",
+                    "retryable": False,
+                    "timestamp": now_iso(),
+                }
+            )
+            job["timing"]["total_runtime_seconds"] = round(elapsed, 2)
+            job["progress"] = {
+                "current_step": "failed",
+                "percent": 100,
+                "message": str(e),
+                "steps_completed": job.get("progress", {}).get("steps_completed", 0),
+                "total_steps": 7,
+            }
             job["updated_at"] = now_iso()
+            job["display"] = compute_display(job.get("status", "queued"), job.get("stage", "queued"))
             save_job(job_id, job)
 
 
@@ -433,6 +778,7 @@ async def run_workflow_with_files(
             max_iterations=max_iterations,
             user_id=user_id,
             options=options,
+            status_callback=None,
         )
 
         result["attached_files"] = [f["filename"] for f in file_payloads]
