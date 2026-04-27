@@ -373,7 +373,7 @@ def create_job(
 
 
 def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    merged_options: Dict[str, Any] = dict(options or {})
+    merged_options: Dict[str, Any] = clean_options(options)
 
     if FORCE_OPTIMIZER_OFF:
         merged_options["optimize_prompt"] = False
@@ -381,6 +381,19 @@ def build_runner_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, 
         merged_options["enable_optimizer"] = False
 
     return merged_options
+
+
+def clean_options(options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    cleaned: Dict[str, Any] = {}
+
+    for key, value in (options or {}).items():
+        if key.startswith("additionalProp"):
+            continue
+        if value is None:
+            continue
+        cleaned[key] = value
+
+    return cleaned
 
 
 def process_job(job_id: str) -> None:
@@ -632,9 +645,14 @@ def process_job(job_id: str) -> None:
             save_job(job_id, job)
 
 
-@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse)
 def serve_index() -> str:
     return INDEX_HTML_PATH.read_text(encoding="utf-8")
+
+
+@app.head("/")
+def serve_index_head() -> JSONResponse:
+    return JSONResponse(content={})
 
 
 @app.get("/health")
