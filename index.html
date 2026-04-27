@@ -200,6 +200,13 @@
       padding: 14px;
     }
 
+    .log-scroll {
+      max-height: 260px;
+      overflow-y: auto;
+      margin-top: 12px;
+      padding-right: 4px;
+    }
+    
     .muted {
       color: var(--muted);
       font-size: 14px;
@@ -416,9 +423,11 @@ Tips:
 
         <details class="log-box">
           <summary>Execution logs</summary>
-          <ul class="log-list" id="logs">
-            <li class="muted">No logs yet.</li>
-          </ul>
+          <div class="log-scroll" id="logScroll">
+            <ul class="log-list" id="logs">
+              <li class="muted">No logs yet.</li>
+            </ul>
+          </div>
         </details>
 
         <details class="panel-box">
@@ -446,6 +455,7 @@ Tips:
     const judgeOutputEl = document.getElementById('judgeOutput');
     const artifactsEl = document.getElementById('artifacts');
     const logsEl = document.getElementById('logs');
+    const logScrollEl = document.getElementById('logScroll');
     const summaryPillsEl = document.getElementById('summaryPills');
     const progressLabelEl = document.getElementById('progressLabel');
     const progressBarEl = document.getElementById('progressBar');
@@ -498,6 +508,48 @@ Tips:
       }
     }
 
+    function formatJudgeOutput(judgeOutput) {
+      if (!judgeOutput) {
+        return 'No judge output yet.';
+      }
+    
+      const openaiScores = judgeOutput.openai_scores || {};
+      const claudeScores = judgeOutput.claude_scores || {};
+    
+      const formatScores = (label, scores) => {
+        const entries = [
+          `Clarity: ${scores.clarity ?? 'n/a'}`,
+          `Completeness: ${scores.completeness ?? 'n/a'}`,
+          `Practical usefulness: ${scores.practical_usefulness ?? 'n/a'}`,
+          `Tone appropriateness: ${scores.tone_appropriateness ?? 'n/a'}`,
+          `Overall strength: ${scores.overall_strength ?? 'n/a'}`
+        ];
+        return `${label}\n${entries.join('\n')}`;
+      };
+    
+      return [
+        `Winner: ${judgeOutput.winner ?? 'n/a'}`,
+        `Next action: ${judgeOutput.next_action ?? 'n/a'}`,
+        `Confidence: ${judgeOutput.confidence ?? 'n/a'}`,
+        `Rerun target: ${judgeOutput.rerun_target ?? 'n/a'}`,
+        '',
+        'Reason:',
+        judgeOutput.reason || 'No reasoning returned.',
+        '',
+        'OpenAI scorecard:',
+        formatScores('OpenAI', openaiScores),
+        '',
+        'Claude scorecard:',
+        formatScores('Claude', claudeScores),
+        '',
+        'Follow-up prompt:',
+        judgeOutput.follow_up_prompt || 'N/A',
+        '',
+        'Revised prompt:',
+        judgeOutput.revised_prompt || 'N/A'
+      ].join('\n');
+    }
+    
     function renderPills(job) {
       summaryPillsEl.innerHTML = '';
 
@@ -613,18 +665,26 @@ Tips:
     }
 
     function renderLogs(logs) {
+      const shouldStickToBottom =
+        !logScrollEl ||
+        (logScrollEl.scrollTop + logScrollEl.clientHeight >= logScrollEl.scrollHeight - 24);
+    
       logsEl.innerHTML = '';
-
+    
       if (!Array.isArray(logs) || logs.length === 0) {
         logsEl.innerHTML = '<li class="muted">No logs yet.</li>';
         return;
       }
-
+    
       logs.forEach(entry => {
         const li = document.createElement('li');
         li.textContent = entry;
         logsEl.appendChild(li);
       });
+    
+      if (shouldStickToBottom && logScrollEl) {
+        logScrollEl.scrollTop = logScrollEl.scrollHeight;
+      }
     }
 
     function renderSummary(job) {
@@ -646,7 +706,7 @@ Tips:
       finalOutputEl.textContent = outputs.final_output || 'No final output yet.';
       openaiOutputEl.textContent = outputs.openai_output || 'No OpenAI output yet.';
       claudeOutputEl.textContent = outputs.claude_output || 'No Claude output yet.';
-      judgeOutputEl.textContent = formatJson(outputs.judge_output, 'No judge output yet.');
+      judgeOutputEl.textContent = formatJudgeOutput(outputs.judge_output);
     }
 
     function renderRawJob(job) {
