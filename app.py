@@ -614,13 +614,14 @@ def process_job(job_id: str) -> None:
 
         job = get_job(job_id)
         if job:
+            previous_stage = job.get("stage", "unknown")
             job["status"] = "failed"
             job["stage"] = "failed"
             job["completed_at"] = now_iso()
             job["error"] = {
                 "code": "PROCESS_JOB_EXCEPTION",
                 "message": str(e),
-                "step": "process_job",
+                "step": previous_stage,
                 "retryable": False,
             }
             job.setdefault("errors", []).append(
