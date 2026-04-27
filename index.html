@@ -507,13 +507,20 @@ Tips:
       const percent = job?.progress?.percent ?? 0;
       const jobId = job?.job_id || 'n/a';
 
+      const winner = job?.summary?.winner || null;
+      const confidence = job?.summary?.confidence || null;
+      const nextAction = job?.summary?.next_action || null;
+      
       const pills = [
         `Job ID: ${jobId}`,
         `Status: ${status}`,
         `Stage: ${stage}`,
         `Progress: ${percent}%`,
-        `Runtime: ${runtime}s`
-      ];
+        `Runtime: ${runtime}s`,
+        winner ? `Winner: ${winner}` : null,
+        confidence ? `Confidence: ${confidence}` : null,
+        nextAction ? `Next Action: ${nextAction}` : null
+      ].filter(Boolean);
 
       pills.forEach(text => {
         const pill = document.createElement('div');
