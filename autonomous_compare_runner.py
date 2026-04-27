@@ -1276,10 +1276,10 @@ def run_autonomous_loop(
                     f"iteration_{iteration}_openai_initial",
                     lambda: call_openai_new_chat(active_prompt),
                     logs,
-                    False,
-                    None,
-                    status_callback,
-                    {
+                    swallow=False,
+                    fallback=None,
+                    status_callback=status_callback,
+                    event_meta={
                         "provider": "OpenAI",
                         "model": OPENAI_MODEL,
                         "iteration": iteration,
@@ -1291,10 +1291,10 @@ def run_autonomous_loop(
                     f"iteration_{iteration}_claude_initial",
                     lambda: call_claude_new_chat(claude_state, active_prompt),
                     logs,
-                    False,
-                    None,
-                    status_callback,
-                    {
+                    swallow=False,
+                    fallback=None,
+                    status_callback=status_callback,
+                    event_meta={
                         "provider": "Claude",
                         "model": CLAUDE_MODEL,
                         "iteration": iteration,
