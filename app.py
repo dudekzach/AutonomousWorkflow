@@ -512,10 +512,6 @@ def process_job(job_id: str) -> None:
 
         elapsed = time.time() - start_time
 
-        if result.get("logs"):
-            for line in result["logs"]:
-                append_job_log(job_id, line)
-
         outputs = result.get("outputs", {})
         if isinstance(outputs, dict):
             for output_name, output_value in outputs.items():
