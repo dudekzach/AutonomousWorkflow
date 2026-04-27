@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autonomous Workflow UI</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --success-bg: #ecfdf5;
+      --success-border: #bbf7d0;
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 32px 20px;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 42px;
+      line-height: 1.1;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+    }
+
+    .label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+
+    textarea {
+      min-height: 240px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 160px;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .primary:hover { background: var(--accent-dark); }
+
+    .secondary {
+      background: #eef2ff;
+      color: #3730a3;
+    }
+
+    .secondary:hover { background: #e0e7ff; }
+
+    .status {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: none;
+      white-space: pre-wrap;
+    }
+
+    .status.success {
+      display: block;
+      background: var(--success-bg);
+      border-color: var(--success-border);
+    }
+
+    .status.error {
+      display: block;
+      background: var(--error-bg);
+      border-color: var(--error-border);
+    }
+
+    .status.info {
+      display: block;
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 14px 0 0;
+    }
+
+    .pill {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .result-box,
+    .log-box,
+    .artifact-box {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fafafa;
+      padding: 14px;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    .artifact-list,
+    .log-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .artifact-list li,
+    .log-list li {
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h1 {
+        font-size: 34px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="hero">
+      <h1>Autonomous Workflow UI</h1>
+      <p>Submit a prompt, run your multi-model workflow, and review the result, logs, and generated artifacts.</p>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Run a prompt</h2>
+
+        <label class="label" for="prompt">Prompt</label>
+        <textarea id="prompt" placeholder="Describe what you want the workflow to produce.
+
+Examples:
+- Create an executive summary comparing CX Cloud vs Agentforce
+- Build a defense strategy for a customer conversation
+- Draft objection handling talk tracks
+- Generate a slide outline for a sales presentation
+
+Tips:
+- Be specific about audience, tone, and desired format
+- Mention if you want bullets, a script, a table, or an executive summary
+- Add context like industry, customer size, or known objections"></textarea>
+
+        <div class="row">
+          <div>
+            <label class="label" for="userId">User ID</label>
+            <input id="userId" type="text" value="zach" />
+          </div>
+          <div>
+            <label class="label" for="maxIterations">Max iterations</label>
+            <input id="maxIterations" type="number" min="1" max="10" value="3" />
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <label class="label" for="fileInput">Attach files</label>
+          <input id="fileInput" type="file" multiple />
+          <div class="footer-note">Attach supporting files like notes, transcripts, PDFs, or drafts. They will be included as context for the workflow.</div>
+          <div class="artifact-box" style="margin-top: 10px;">
+            <div class="label">Selected files</div>
+            <ul class="artifact-list" id="selectedFiles">
+              <li class="muted">No files selected.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="runBtn">Run workflow</button>
+          <button class="secondary" id="clearBtn" type="button">Clear results</button>
+        </div>
+
+        <div id="status" class="status info">Ready.</div>
+        <div class="footer-note">This UI calls your local FastAPI backend at <strong>/run</strong>.</div>
+      </section>
+
+      <section class="card">
+        <h2>Latest response</h2>
+        <div class="muted">This panel updates after each successful run.</div>
+
+        <div class="pill-row" id="summaryPills"></div>
+
+        <div class="result-box">
+          <div class="label">Summary</div>
+          <pre id="summary">No run yet.</pre>
+        </div>
+
+        <div class="result-box">
+          <div class="label">Full output</div>
+          <pre id="fullOutput">Run the workflow to see output here.</pre>
+        </div>
+
+        <div class="artifact-box">
+          <div class="label">Artifacts</div>
+          <ul class="artifact-list" id="artifacts">
+            <li class="muted">No artifacts yet.</li>
+          </ul>
+        </div>
+
+        <div class="log-box">
+          <div class="label">Logs</div>
+          <ul class="log-list" id="logs">
+            <li class="muted">No logs yet.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    const promptEl = document.getElementById('prompt');
+    const userIdEl = document.getElementById('userId');
+    const maxIterationsEl = document.getElementById('maxIterations');
+    const fileInputEl = document.getElementById('fileInput');
+    const selectedFilesEl = document.getElementById('selectedFiles');
+    const runBtn = document.getElementById('runBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusEl = document.getElementById('status');
+    const summaryEl = document.getElementById('summary');
+    const fullOutputEl = document.getElementById('fullOutput');
+    const artifactsEl = document.getElementById('artifacts');
+    const logsEl = document.getElementById('logs');
+    const summaryPillsEl = document.getElementById('summaryPills');
+
+    function setStatus(message, type = 'info') {
+      statusEl.className = `status ${type}`;
+      statusEl.textContent = message;
+    }
+
+    function setLoading(isLoading) {
+      runBtn.disabled = isLoading;
+      runBtn.textContent = isLoading ? 'Running...' : 'Run workflow';
+    }
+
+    function renderPills(data) {
+      summaryPillsEl.innerHTML = '';
+
+      const pills = [
+        `Status: ${data.status ?? 'unknown'}`,
+        `Runtime: ${data.runtime_seconds ?? 'n/a'}s`,
+        `Artifacts: ${Array.isArray(data.artifacts) ? data.artifacts.length : 0}`,
+      ];
+
+      pills.forEach(text => {
+        const pill = document.createElement('div');
+        pill.className = 'pill';
+        pill.textContent = text;
+        summaryPillsEl.appendChild(pill);
+      });
+    }
+
+    function renderArtifacts(artifacts) {
+      artifactsEl.innerHTML = '';
+
+      if (!artifacts || artifacts.length === 0) {
+        artifactsEl.innerHTML = '<li class="muted">No artifacts returned.</li>';
+        return;
+      }
+
+      artifacts.forEach(item => {
+        const li = document.createElement('li');
+        const path = item.path || '';
+        const link = document.createElement('a');
+        link.href = path;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = `${item.type || 'file'}: ${path}`;
+        li.appendChild(link);
+        artifactsEl.appendChild(li);
+      });
+    }
+
+    function renderLogs(logs) {
+      logsEl.innerHTML = '';
+
+      if (!logs || logs.length === 0) {
+        logsEl.innerHTML = '<li class="muted">No logs returned.</li>';
+        return;
+      }
+
+      logs.forEach(entry => {
+        const li = document.createElement('li');
+        li.textContent = entry;
+        logsEl.appendChild(li);
+      });
+    }
+
+    function renderSelectedFiles(files) {
+      selectedFilesEl.innerHTML = '';
+
+      if (!files || files.length === 0) {
+        selectedFilesEl.innerHTML = '<li class="muted">No files selected.</li>';
+        return;
+      }
+
+      Array.from(files).forEach(file => {
+        const li = document.createElement('li');
+        li.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
+        selectedFilesEl.appendChild(li);
+      });
+    }
+
+    function clearResults() {
+      summaryEl.textContent = 'No run yet.';
+      fullOutputEl.textContent = 'Run the workflow to see output here.';
+      artifactsEl.innerHTML = '<li class="muted">No artifacts yet.</li>';
+      logsEl.innerHTML = '<li class="muted">No logs yet.</li>';
+      summaryPillsEl.innerHTML = '';
+      setStatus('Ready.', 'info');
+    }
+
+    async function runWorkflow() {
+      const prompt = promptEl.value.trim();
+      const userId = userIdEl.value.trim() || '';
+      const maxIterations = Number(maxIterationsEl.value || 3);
+      const files = fileInputEl.files;
+
+      if (!prompt) {
+        setStatus('Prompt cannot be empty.', 'error');
+        return;
+      }
+
+      setLoading(true);
+      setStatus('Submitting workflow request...', 'info');
+
+      try {
+        const formData = new FormData();
+        formData.append('prompt', prompt);
+        formData.append('max_iterations', String(maxIterations));
+        formData.append('user_id', userId);
+
+        Array.from(files).forEach(file => {
+          formData.append('files', file);
+        });
+
+        const response = await fetch(`${API_BASE}/run-with-files`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        renderPills(data);
+        summaryEl.textContent = data.summary || 'No summary returned.';
+        fullOutputEl.textContent = data.full_output || 'No full output returned.';
+        renderArtifacts(data.artifacts || []);
+        renderLogs(data.logs || []);
+
+        if (data.status === 'success') {
+          setStatus('Workflow completed successfully.', 'success');
+        } else {
+          setStatus(data.error || 'Workflow returned an error state.', 'error');
+        }
+      } catch (error) {
+        setStatus(`Request failed: ${error.message}`, 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    runBtn.addEventListener('click', runWorkflow);
+    fileInputEl.addEventListener('change', () => renderSelectedFiles(fileInputEl.files));
+    clearBtn.addEventListener('click', () => {
+      fileInputEl.value = '';
+      renderSelectedFiles(fileInputEl.files);
+      clearResults();
+    });
+  </script>
+</body>
+</html>
