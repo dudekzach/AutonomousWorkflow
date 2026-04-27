@@ -17,8 +17,15 @@
       --success-border: #bbf7d0;
       --error-bg: #fef2f2;
       --error-border: #fecaca;
+      --info-bg: #eff6ff;
+      --info-border: #bfdbfe;
       --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
       --radius: 16px;
+      --step-pending: #f3f4f6;
+      --step-running: #dbeafe;
+      --step-completed: #dcfce7;
+      --step-skipped: #fef3c7;
+      --step-failed: #fee2e2;
     }
 
     * { box-sizing: border-box; }
@@ -32,7 +39,7 @@
     }
 
     .app {
-      max-width: 1100px;
+      max-width: 1250px;
       margin: 0 auto;
     }
 
@@ -54,7 +61,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
+      grid-template-columns: 1.05fr 0.95fr;
       gap: 24px;
       align-items: start;
     }
@@ -135,6 +142,11 @@
 
     .secondary:hover { background: #e0e7ff; }
 
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
     .status {
       margin-top: 18px;
       padding: 12px 14px;
@@ -158,8 +170,8 @@
 
     .status.info {
       display: block;
-      background: #eff6ff;
-      border-color: #bfdbfe;
+      background: var(--info-bg);
+      border-color: var(--info-border);
     }
 
     .pill-row {
@@ -179,32 +191,13 @@
 
     .result-box,
     .log-box,
-    .artifact-box {
+    .artifact-box,
+    .panel-box {
       margin-top: 16px;
       border: 1px solid var(--border);
       border-radius: 12px;
       background: #fafafa;
       padding: 14px;
-    }
-
-    pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      font-family: Arial, sans-serif;
-      line-height: 1.5;
-    }
-
-    .artifact-list,
-    .log-list {
-      margin: 0;
-      padding-left: 18px;
-    }
-
-    .artifact-list li,
-    .log-list li {
-      margin-bottom: 8px;
-      line-height: 1.4;
     }
 
     .muted {
@@ -218,12 +211,103 @@
       font-size: 13px;
     }
 
-    @media (max-width: 900px) {
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    .artifact-list,
+    .log-list,
+    .simple-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .artifact-list li,
+    .log-list li,
+    .simple-list li {
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .progress-shell {
+      margin-top: 12px;
+      width: 100%;
+      height: 14px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .step-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .step-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 12px;
+      background: white;
+    }
+
+    .step-card.pending { background: var(--step-pending); }
+    .step-card.running { background: var(--step-running); }
+    .step-card.completed { background: var(--step-completed); }
+    .step-card.skipped { background: var(--step-skipped); }
+    .step-card.failed { background: var(--step-failed); }
+
+    .step-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+      text-transform: capitalize;
+    }
+
+    .step-meta {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .output-block {
+      margin-top: 14px;
+    }
+
+    details {
+      margin-top: 12px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    @media (max-width: 980px) {
       .grid {
         grid-template-columns: 1fr;
       }
 
-      .row {
+      .row,
+      .two-col,
+      .step-grid {
         grid-template-columns: 1fr;
       }
 
@@ -237,7 +321,7 @@
   <div class="app">
     <div class="hero">
       <h1>Autonomous Workflow UI</h1>
-      <p>Submit a prompt, run your multi-model workflow, and review the result, logs, and generated artifacts.</p>
+      <p>Submit a prompt, launch the workflow as a background job, and watch progress update live.</p>
     </div>
 
     <div class="grid">
@@ -269,32 +353,33 @@ Tips:
           </div>
         </div>
 
-        <div style="margin-top: 16px;">
-          <label class="label" for="fileInput">Attach files</label>
-          <input id="fileInput" type="file" multiple />
-          <div class="footer-note">Attach supporting files like notes, transcripts, PDFs, or drafts. They will be included as context for the workflow.</div>
-          <div class="artifact-box" style="margin-top: 10px;">
-            <div class="label">Selected files</div>
-            <ul class="artifact-list" id="selectedFiles">
-              <li class="muted">No files selected.</li>
-            </ul>
-          </div>
-        </div>
-
         <div class="actions">
           <button class="primary" id="runBtn">Run workflow</button>
           <button class="secondary" id="clearBtn" type="button">Clear results</button>
         </div>
 
         <div id="status" class="status info">Ready.</div>
-        <div class="footer-note">This UI calls your local FastAPI backend at <strong>/run</strong>.</div>
+        <div class="footer-note">This UI submits to <strong>/run</strong> and polls <strong>/status/{job_id}</strong>.</div>
       </section>
 
       <section class="card">
-        <h2>Latest response</h2>
-        <div class="muted">This panel updates after each successful run.</div>
+        <h2>Live workflow status</h2>
+        <div class="muted">This panel updates while the backend job is running.</div>
 
         <div class="pill-row" id="summaryPills"></div>
+
+        <div class="panel-box">
+          <div class="label">Progress</div>
+          <div id="progressLabel" class="muted">No job started.</div>
+          <div class="progress-shell">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+        </div>
+
+        <div class="panel-box">
+          <div class="label">Step status</div>
+          <div id="stepGrid" class="step-grid"></div>
+        </div>
 
         <div class="result-box">
           <div class="label">Summary</div>
@@ -302,8 +387,24 @@ Tips:
         </div>
 
         <div class="result-box">
-          <div class="label">Full output</div>
-          <pre id="fullOutput">Run the workflow to see output here.</pre>
+          <div class="label">Final output</div>
+          <pre id="finalOutput">Run the workflow to see output here.</pre>
+        </div>
+
+        <div class="two-col">
+          <div class="result-box output-block">
+            <div class="label">OpenAI output</div>
+            <pre id="openaiOutput">No output yet.</pre>
+          </div>
+          <div class="result-box output-block">
+            <div class="label">Claude output</div>
+            <pre id="claudeOutput">No output yet.</pre>
+          </div>
+        </div>
+
+        <div class="result-box">
+          <div class="label">Judge output</div>
+          <pre id="judgeOutput">No judge output yet.</pre>
         </div>
 
         <div class="artifact-box">
@@ -313,32 +414,56 @@ Tips:
           </ul>
         </div>
 
-        <div class="log-box">
-          <div class="label">Logs</div>
+        <details class="log-box">
+          <summary>Execution logs</summary>
           <ul class="log-list" id="logs">
             <li class="muted">No logs yet.</li>
           </ul>
-        </div>
+        </details>
+
+        <details class="panel-box">
+          <summary>Raw job payload</summary>
+          <pre id="rawJob">No job payload yet.</pre>
+        </details>
       </section>
     </div>
   </div>
 
   <script>
     const API_BASE = window.location.origin;
+    const POLL_INTERVAL_MS = 1500;
 
     const promptEl = document.getElementById('prompt');
     const userIdEl = document.getElementById('userId');
     const maxIterationsEl = document.getElementById('maxIterations');
-    const fileInputEl = document.getElementById('fileInput');
-    const selectedFilesEl = document.getElementById('selectedFiles');
     const runBtn = document.getElementById('runBtn');
     const clearBtn = document.getElementById('clearBtn');
     const statusEl = document.getElementById('status');
     const summaryEl = document.getElementById('summary');
-    const fullOutputEl = document.getElementById('fullOutput');
+    const finalOutputEl = document.getElementById('finalOutput');
+    const openaiOutputEl = document.getElementById('openaiOutput');
+    const claudeOutputEl = document.getElementById('claudeOutput');
+    const judgeOutputEl = document.getElementById('judgeOutput');
     const artifactsEl = document.getElementById('artifacts');
     const logsEl = document.getElementById('logs');
     const summaryPillsEl = document.getElementById('summaryPills');
+    const progressLabelEl = document.getElementById('progressLabel');
+    const progressBarEl = document.getElementById('progressBar');
+    const stepGridEl = document.getElementById('stepGrid');
+    const rawJobEl = document.getElementById('rawJob');
+
+    let activeJobId = null;
+    let pollHandle = null;
+
+    const STEP_ORDER = [
+      'optimizer',
+      'openai',
+      'claude',
+      'judge',
+      'follow_up',
+      'stitch',
+      'artifacts'
+    ];
 
     function setStatus(message, type = 'info') {
       statusEl.className = `status ${type}`;
@@ -347,16 +472,47 @@ Tips:
 
     function setLoading(isLoading) {
       runBtn.disabled = isLoading;
-      runBtn.textContent = isLoading ? 'Running...' : 'Run workflow';
+      runBtn.textContent = isLoading ? 'Starting...' : 'Run workflow';
     }
 
-    function renderPills(data) {
+    function stopPolling() {
+      if (pollHandle) {
+        clearInterval(pollHandle);
+        pollHandle = null;
+      }
+    }
+
+    function formatJson(value, fallback = 'No data yet.') {
+      if (value === null || value === undefined || value === '') {
+        return fallback;
+      }
+
+      if (typeof value === 'string') {
+        return value;
+      }
+
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch (error) {
+        return String(value);
+      }
+    }
+
+    function renderPills(job) {
       summaryPillsEl.innerHTML = '';
 
+      const status = job?.display?.status_label || job?.status || 'unknown';
+      const stage = job?.display?.stage_label || job?.stage || 'unknown';
+      const runtime = job?.timing?.total_runtime_seconds ?? 'n/a';
+      const percent = job?.progress?.percent ?? 0;
+      const jobId = job?.job_id || 'n/a';
+
       const pills = [
-        `Status: ${data.status ?? 'unknown'}`,
-        `Runtime: ${data.runtime_seconds ?? 'n/a'}s`,
-        `Artifacts: ${Array.isArray(data.artifacts) ? data.artifacts.length : 0}`,
+        `Job ID: ${jobId}`,
+        `Status: ${status}`,
+        `Stage: ${stage}`,
+        `Progress: ${percent}%`,
+        `Runtime: ${runtime}s`
       ];
 
       pills.forEach(text => {
@@ -367,22 +523,83 @@ Tips:
       });
     }
 
+    function renderProgress(job) {
+      const progress = job?.progress || {};
+      const percent = Number(progress.percent || 0);
+      const message = progress.message || 'Waiting for updates...';
+      const currentStep = progress.current_step || 'queued';
+
+      progressBarEl.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+      progressLabelEl.textContent = `${percent}% — ${currentStep} — ${message}`;
+    }
+
+    function renderSteps(job) {
+      stepGridEl.innerHTML = '';
+
+      const steps = job?.steps || {};
+
+      STEP_ORDER.forEach(stepName => {
+        const step = steps[stepName] || {};
+        const status = step.status || 'pending';
+
+        const card = document.createElement('div');
+        card.className = `step-card ${status}`;
+
+        const title = document.createElement('div');
+        title.className = 'step-title';
+        title.textContent = stepName.replace('_', ' ');
+
+        const meta = document.createElement('div');
+        meta.className = 'step-meta';
+
+        const provider = step.provider ? `Provider: ${step.provider}` : null;
+        const model = step.model ? `Model: ${step.model}` : null;
+        const latency = step.latency_seconds !== null && step.latency_seconds !== undefined
+          ? `Latency: ${step.latency_seconds}s`
+          : null;
+        const message = step.message ? `Message: ${step.message}` : null;
+        const error = step.error ? `Error: ${step.error}` : null;
+
+        const lines = [
+          `Status: ${status}`,
+          provider,
+          model,
+          latency,
+          message,
+          error
+        ].filter(Boolean);
+
+        meta.innerHTML = lines.map(line => `<div>${escapeHtml(line)}</div>`).join('');
+
+        card.appendChild(title);
+        card.appendChild(meta);
+        stepGridEl.appendChild(card);
+      });
+    }
+
     function renderArtifacts(artifacts) {
       artifactsEl.innerHTML = '';
 
-      if (!artifacts || artifacts.length === 0) {
-        artifactsEl.innerHTML = '<li class="muted">No artifacts returned.</li>';
+      const htmlPath = artifacts?.html_path || null;
+      const jsonPath = artifacts?.json_path || null;
+
+      if (!htmlPath && !jsonPath) {
+        artifactsEl.innerHTML = '<li class="muted">No artifacts yet.</li>';
         return;
       }
 
-      artifacts.forEach(item => {
+      [
+        { label: 'HTML artifact', path: htmlPath },
+        { label: 'JSON artifact', path: jsonPath }
+      ].forEach(item => {
+        if (!item.path) return;
+
         const li = document.createElement('li');
-        const path = item.path || '';
         const link = document.createElement('a');
-        link.href = path;
+        link.href = item.path.startsWith('/') ? item.path : `/${item.path}`;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.textContent = `${item.type || 'file'}: ${path}`;
+        link.textContent = `${item.label}: ${item.path}`;
         li.appendChild(link);
         artifactsEl.appendChild(li);
       });
@@ -391,8 +608,8 @@ Tips:
     function renderLogs(logs) {
       logsEl.innerHTML = '';
 
-      if (!logs || logs.length === 0) {
-        logsEl.innerHTML = '<li class="muted">No logs returned.</li>';
+      if (!Array.isArray(logs) || logs.length === 0) {
+        logsEl.innerHTML = '<li class="muted">No logs yet.</li>';
         return;
       }
 
@@ -403,57 +620,136 @@ Tips:
       });
     }
 
-    function renderSelectedFiles(files) {
-      selectedFilesEl.innerHTML = '';
+    function renderSummary(job) {
+      const summary = job?.summary || {};
+      const lines = [
+        `Winner: ${summary.winner ?? 'n/a'}`,
+        `Next action: ${summary.next_action ?? 'n/a'}`,
+        `Confidence: ${summary.confidence ?? 'n/a'}`,
+        '',
+        `Reason:`,
+        summary.reason || 'No summary yet.'
+      ];
 
-      if (!files || files.length === 0) {
-        selectedFilesEl.innerHTML = '<li class="muted">No files selected.</li>';
-        return;
-      }
+      summaryEl.textContent = lines.join('\n');
+    }
 
-      Array.from(files).forEach(file => {
-        const li = document.createElement('li');
-        li.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
-        selectedFilesEl.appendChild(li);
-      });
+    function renderOutputs(job) {
+      const outputs = job?.outputs || {};
+      finalOutputEl.textContent = outputs.final_output || 'No final output yet.';
+      openaiOutputEl.textContent = outputs.openai_output || 'No OpenAI output yet.';
+      claudeOutputEl.textContent = outputs.claude_output || 'No Claude output yet.';
+      judgeOutputEl.textContent = formatJson(outputs.judge_output, 'No judge output yet.');
+    }
+
+    function renderRawJob(job) {
+      rawJobEl.textContent = formatJson(job, 'No job payload yet.');
+    }
+
+    function renderJob(job) {
+      renderPills(job);
+      renderProgress(job);
+      renderSteps(job);
+      renderSummary(job);
+      renderOutputs(job);
+      renderArtifacts(job?.artifacts || {});
+      renderLogs(job?.logs || []);
+      renderRawJob(job);
     }
 
     function clearResults() {
+      stopPolling();
+      activeJobId = null;
+      summaryPillsEl.innerHTML = '';
+      progressLabelEl.textContent = 'No job started.';
+      progressBarEl.style.width = '0%';
+      stepGridEl.innerHTML = '';
       summaryEl.textContent = 'No run yet.';
-      fullOutputEl.textContent = 'Run the workflow to see output here.';
+      finalOutputEl.textContent = 'Run the workflow to see output here.';
+      openaiOutputEl.textContent = 'No output yet.';
+      claudeOutputEl.textContent = 'No output yet.';
+      judgeOutputEl.textContent = 'No judge output yet.';
       artifactsEl.innerHTML = '<li class="muted">No artifacts yet.</li>';
       logsEl.innerHTML = '<li class="muted">No logs yet.</li>';
-      summaryPillsEl.innerHTML = '';
+      rawJobEl.textContent = 'No job payload yet.';
       setStatus('Ready.', 'info');
+      setLoading(false);
+    }
+
+    function isTerminal(job) {
+      return Boolean(job?.display?.is_terminal) ||
+        ['completed', 'failed', 'completed_with_errors'].includes(job?.status);
+    }
+
+    async function pollJobStatus(jobId) {
+      try {
+        const response = await fetch(`${API_BASE}/status/${jobId}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const job = await response.json();
+        renderJob(job);
+
+        if (job.status === 'completed' || job.status === 'completed_with_errors') {
+          setStatus(`Workflow finished. Final status: ${job.status}.`, 'success');
+          setLoading(false);
+        } else if (job.status === 'failed') {
+          const errorMessage = job?.error?.message || job?.progress?.message || 'Workflow failed.';
+          setStatus(errorMessage, 'error');
+          setLoading(false);
+        } else {
+          const stageLabel = job?.display?.stage_label || job?.stage || 'Running';
+          const progressMessage = job?.progress?.message || 'Workflow in progress...';
+          setStatus(`${stageLabel}: ${progressMessage}`, 'info');
+        }
+
+        if (isTerminal(job)) {
+          stopPolling();
+        }
+      } catch (error) {
+        stopPolling();
+        setStatus(`Polling failed: ${error.message}`, 'error');
+        setLoading(false);
+      }
+    }
+
+    function startPolling(jobId) {
+      stopPolling();
+      pollJobStatus(jobId);
+      pollHandle = setInterval(() => pollJobStatus(jobId), POLL_INTERVAL_MS);
     }
 
     async function runWorkflow() {
       const prompt = promptEl.value.trim();
       const userId = userIdEl.value.trim() || '';
       const maxIterations = Number(maxIterationsEl.value || 3);
-      const files = fileInputEl.files;
 
       if (!prompt) {
         setStatus('Prompt cannot be empty.', 'error');
         return;
       }
 
+      clearResults();
       setLoading(true);
       setStatus('Submitting workflow request...', 'info');
 
       try {
-        const formData = new FormData();
-        formData.append('prompt', prompt);
-        formData.append('max_iterations', String(maxIterations));
-        formData.append('user_id', userId);
+        const payload = {
+          prompt,
+          max_iterations: maxIterations,
+          user_id: userId,
+          options: {}
+        };
 
-        Array.from(files).forEach(file => {
-          formData.append('files', file);
-        });
-
-        const response = await fetch(`${API_BASE}/run-with-files`, {
+        const response = await fetch(`${API_BASE}/run`, {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
@@ -462,32 +758,30 @@ Tips:
         }
 
         const data = await response.json();
-
-        renderPills(data);
-        summaryEl.textContent = data.summary || 'No summary returned.';
-        fullOutputEl.textContent = data.full_output || 'No full output returned.';
-        renderArtifacts(data.artifacts || []);
-        renderLogs(data.logs || []);
-
-        if (data.status === 'success') {
-          setStatus('Workflow completed successfully.', 'success');
-        } else {
-          setStatus(data.error || 'Workflow returned an error state.', 'error');
+        if (!data.job_id) {
+          throw new Error('No job_id returned from /run.');
         }
+
+        activeJobId = data.job_id;
+        setStatus(`Workflow submitted. Job ID: ${activeJobId}`, 'info');
+        startPolling(activeJobId);
       } catch (error) {
         setStatus(`Request failed: ${error.message}`, 'error');
-      } finally {
         setLoading(false);
       }
     }
 
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
     runBtn.addEventListener('click', runWorkflow);
-    fileInputEl.addEventListener('change', () => renderSelectedFiles(fileInputEl.files));
-    clearBtn.addEventListener('click', () => {
-      fileInputEl.value = '';
-      renderSelectedFiles(fileInputEl.files);
-      clearResults();
-    });
+    clearBtn.addEventListener('click', clearResults);
   </script>
 </body>
 </html>
