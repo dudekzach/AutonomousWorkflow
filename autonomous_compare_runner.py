@@ -1,4 +1,3 @@
-
 import argparse
 import html
 import json
@@ -7,9 +6,8 @@ import time
 import traceback
 import webbrowser
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from dotenv import load_dotenv
@@ -42,6 +40,7 @@ LOG_TO_STDOUT = os.getenv("LOG_TO_STDOUT", "true").lower() == "true"
 FORCE_DISABLE_OPTIMIZER = True
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
+
 
 # =========================
 # Data structures
@@ -134,24 +133,113 @@ if not ANTHROPIC_API_KEY:
     raise ValueError("Missing ANTHROPIC_API_KEY in .env")
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY, timeout=OPENAI_TIMEOUT_SECONDS)
-anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, timeout=ANTHROPIC_TIMEOUT_SECONDS)
+anthropic_client = anthropic.Anthropic(
+    api_key=ANTHROPIC_API_KEY,
+    timeout=ANTHROPIC_TIMEOUT_SECONDS,
+)
 
 
 # =========================
-# Logging helpers
+# Event + Logging helpers
 # =========================
 
-def add_log(logs: Optional[List[str]], message: str) -> None:
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def emit_event(
+    status_callback: Optional[Callable[[Dict[str, Any]], None]],
+    event: Dict[str, Any],
+) -> None:
+    if status_callback:
+        try:
+            status_callback(event)
+        except Exception:
+            pass
+
+
+def emit_log(
+    status_callback: Optional[Callable[[Dict[str, Any]], None]],
+    message: str,
+) -> None:
+    emit_event(status_callback, {"type": "log", "message": message})
+
+
+def emit_stage(
+    status_callback: Optional[Callable[[Dict[str, Any]], None]],
+    stage: str,
+    message: str,
+    *,
+    steps_completed: Optional[int] = None,
+) -> None:
+    payload: Dict[str, Any] = {
+        "type": "stage",
+        "stage": stage,
+        "message": message,
+    }
+    if steps_completed is not None:
+        payload["steps_completed"] = steps_completed
+    emit_event(status_callback, payload)
+
+
+def emit_output(
+    status_callback: Optional[Callable[[Dict[str, Any]], None]],
+    name: str,
+    value: Any,
+) -> None:
+    emit_event(status_callback, {"type": "output", "name": name, "value": value})
+
+
+def emit_summary(
+    status_callback: Optional[Callable[[Dict[str, Any]], None]],
+    value: Dict[str, Any],
+) -> None:
+    emit_event(status_callback, {"type": "summary", "value": value})
+
+
+def emit_iteration(
+    status_callback: Optional[Callable[[Dict[str, Any]], None]],
+    value: Dict[str, Any],
+) -> None:
+    emit_event(status_callback, {"type": "iteration", "value": value})
+
+
+def add_log(
+    logs: Optional[List[str]],
+    message: str,
+    status_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+) -> None:
     timestamp = datetime.now().strftime("%H:%M:%S")
     line = f"[{timestamp}] {message}"
     if logs is not None:
         logs.append(line)
     if LOG_TO_STDOUT:
         print(line, flush=True)
+    emit_log(status_callback, line)
 
 
 def capture_exception_summary(exc: Exception) -> str:
     return f"{type(exc).__name__}: {exc}"
+
+
+def map_internal_step(step_name: str) -> Optional[str]:
+    lower = step_name.lower()
+
+    if "prompt_optimizer" in lower:
+        return "optimizer"
+    if "_openai_" in lower or lower.endswith("openai"):
+        return "openai"
+    if "_claude_" in lower or lower.endswith("claude"):
+        return "claude"
+    if "judge" in lower:
+        return "judge"
+    if "follow_up" in lower or "continuation" in lower:
+        return "follow_up"
+    if "stitch" in lower:
+        return "stitch"
+    if "save_outputs" in lower:
+        return "artifacts"
+    return None
 
 
 def run_step(
@@ -161,18 +249,86 @@ def run_step(
     *,
     swallow: bool = False,
     fallback: Any = None,
+    status_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+    event_meta: Optional[Dict[str, Any]] = None,
 ) -> Any:
-    add_log(logs, f"START {step_name}")
+    add_log(logs, f"START {step_name}", status_callback)
     started = time.time()
+    public_step = map_internal_step(step_name)
+    merged_meta = dict(event_meta or {})
+    started_at = now_iso()
+
+    if public_step:
+        emit_event(
+            status_callback,
+            {
+                "type": "step_started",
+                "step": public_step,
+                "message": f"{step_name} started",
+                "started_at": started_at,
+                "provider": merged_meta.get("provider"),
+                "model": merged_meta.get("model"),
+                "attempts": merged_meta.get("attempts", 1),
+                "meta": merged_meta,
+            },
+        )
+
     try:
         result = func()
         duration = round(time.time() - started, 2)
-        add_log(logs, f"DONE {step_name} ({duration}s)")
+        add_log(logs, f"DONE {step_name} ({duration}s)", status_callback)
+
+        completion_meta = dict(merged_meta)
+        if isinstance(result, ProviderResult):
+            completion_meta.setdefault("response_id", result.response_id)
+            if result.error:
+                completion_meta.setdefault("provider_error", result.error)
+
+        if public_step:
+            emit_event(
+                status_callback,
+                {
+                    "type": "step_completed",
+                    "step": public_step,
+                    "message": f"{step_name} completed",
+                    "completed_at": now_iso(),
+                    "latency_seconds": duration,
+                    "provider": completion_meta.get("provider"),
+                    "model": completion_meta.get("model"),
+                    "attempts": completion_meta.get("attempts", 1),
+                    "meta": completion_meta,
+                },
+            )
         return result
+
     except Exception as exc:
         duration = round(time.time() - started, 2)
-        add_log(logs, f"FAIL {step_name} ({duration}s) -> {capture_exception_summary(exc)}")
-        add_log(logs, traceback.format_exc())
+        add_log(
+            logs,
+            f"FAIL {step_name} ({duration}s) -> {capture_exception_summary(exc)}",
+            status_callback,
+        )
+        add_log(logs, traceback.format_exc(), status_callback)
+
+        if public_step:
+            emit_event(
+                status_callback,
+                {
+                    "type": "step_failed",
+                    "step": public_step,
+                    "message": f"{step_name} failed",
+                    "completed_at": now_iso(),
+                    "latency_seconds": duration,
+                    "provider": merged_meta.get("provider"),
+                    "model": merged_meta.get("model"),
+                    "attempts": merged_meta.get("attempts", 1),
+                    "meta": merged_meta,
+                    "error": capture_exception_summary(exc),
+                    "code": "STEP_FAILED",
+                    "retryable": False,
+                },
+            )
+
         if swallow:
             return fallback
         raise
@@ -484,7 +640,10 @@ def default_scorecard(value: int = 3) -> ScoreCard:
     )
 
 
-def build_fallback_judge(openai_result: ProviderResult, claude_result: ProviderResult) -> JudgeDecision:
+def build_fallback_judge(
+    openai_result: ProviderResult,
+    claude_result: ProviderResult,
+) -> JudgeDecision:
     openai_ok = bool((openai_result.text or "").strip()) and not openai_result.error
     claude_ok = bool((claude_result.text or "").strip()) and not claude_result.error
 
@@ -589,11 +748,16 @@ def judge_outputs_safe(
     openai_result: ProviderResult,
     claude_result: ProviderResult,
     logs: Optional[List[str]] = None,
+    status_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> JudgeDecision:
     try:
         return judge_outputs(original_prompt, openai_result, claude_result)
     except Exception as exc:
-        add_log(logs, f"Judge failed. Falling back to simple decision. {capture_exception_summary(exc)}")
+        add_log(
+            logs,
+            f"Judge failed. Falling back to simple decision. {capture_exception_summary(exc)}",
+            status_callback,
+        )
         return build_fallback_judge(openai_result, claude_result)
 
 
@@ -858,18 +1022,40 @@ def optimize_prompt(
     original_prompt: str,
     options: Optional[Dict[str, Any]] = None,
     logs: Optional[List[str]] = None,
+    status_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> PromptOptimizationResult:
     options = options or {}
 
-    optimize_enabled = False if FORCE_DISABLE_OPTIMIZER else options.get("optimize_prompt", ENABLE_OPTIMIZER_BY_DEFAULT)
+    optimize_enabled = False if FORCE_DISABLE_OPTIMIZER else options.get(
+        "optimize_prompt",
+        ENABLE_OPTIMIZER_BY_DEFAULT,
+    )
     strategy = options.get("optimizer_strategy", "compare_both")
     target_model = options.get("optimizer_target_model")
     use_case = options.get("optimizer_use_case")
     tone_style = options.get("optimizer_tone_style")
     output_format = options.get("optimizer_output_format")
 
+    emit_stage(status_callback, "optimizing_prompt", "Optimizing prompt", steps_completed=0)
+
     if not optimize_enabled:
-        add_log(logs, "Prompt optimizer disabled for this run")
+        add_log(logs, "Prompt optimizer disabled for this run", status_callback)
+        emit_event(
+            status_callback,
+            {
+                "type": "step_skipped",
+                "step": "optimizer",
+                "message": "Prompt optimizer disabled for this run",
+                "completed_at": now_iso(),
+                "meta": {
+                    "strategy": "disabled",
+                    "target_model": target_model,
+                    "use_case": use_case,
+                    "tone_style": tone_style,
+                    "output_format": output_format,
+                },
+            },
+        )
         return PromptOptimizationResult(
             original_prompt=original_prompt,
             optimized_prompt=original_prompt,
@@ -896,9 +1082,16 @@ def optimize_prompt(
             logs,
             swallow=True,
             fallback=None,
+            status_callback=status_callback,
+            event_meta={
+                "provider": "Claude",
+                "model": CLAUDE_MODEL,
+                "strategy": strategy,
+            },
         )
         if result:
             result.strategy = strategy
+            emit_output(status_callback, "optimized_prompt", result.optimized_prompt)
             return result
 
     elif strategy == "single_openai":
@@ -914,9 +1107,16 @@ def optimize_prompt(
             logs,
             swallow=True,
             fallback=None,
+            status_callback=status_callback,
+            event_meta={
+                "provider": "OpenAI",
+                "model": OPENAI_MODEL,
+                "strategy": strategy,
+            },
         )
         if result:
             result.strategy = strategy
+            emit_output(status_callback, "optimized_prompt", result.optimized_prompt)
             return result
 
     else:
@@ -932,6 +1132,12 @@ def optimize_prompt(
             logs,
             swallow=True,
             fallback=None,
+            status_callback=status_callback,
+            event_meta={
+                "provider": "OpenAI",
+                "model": OPENAI_MODEL,
+                "strategy": strategy,
+            },
         )
         claude_result = run_step(
             "prompt_optimizer_claude",
@@ -945,6 +1151,12 @@ def optimize_prompt(
             logs,
             swallow=True,
             fallback=None,
+            status_callback=status_callback,
+            event_meta={
+                "provider": "Claude",
+                "model": CLAUDE_MODEL,
+                "strategy": strategy,
+            },
         )
 
         if openai_result and claude_result:
@@ -958,6 +1170,12 @@ def optimize_prompt(
                 logs,
                 swallow=True,
                 fallback=None,
+                status_callback=status_callback,
+                event_meta={
+                    "provider": "OpenAI",
+                    "model": JUDGE_MODEL,
+                    "strategy": strategy,
+                },
             )
             if selection:
                 selected_provider = selection["selected_provider"]
@@ -974,18 +1192,43 @@ def optimize_prompt(
                     indent=2,
                 )
                 selected_result.optimized_prompt = selection["selected_optimized_prompt"]
+                emit_output(status_callback, "optimized_prompt", selected_result.optimized_prompt)
                 return selected_result
 
         if openai_result:
             openai_result.strategy = "fallback_openai"
-            openai_result.selection_reason = "Claude optimizer or selection step failed, so OpenAI optimizer was used."
+            openai_result.selection_reason = (
+                "Claude optimizer or selection step failed, so OpenAI optimizer was used."
+            )
+            emit_output(status_callback, "optimized_prompt", openai_result.optimized_prompt)
             return openai_result
         if claude_result:
             claude_result.strategy = "fallback_claude"
-            claude_result.selection_reason = "OpenAI optimizer or selection step failed, so Claude optimizer was used."
+            claude_result.selection_reason = (
+                "OpenAI optimizer or selection step failed, so Claude optimizer was used."
+            )
+            emit_output(status_callback, "optimized_prompt", claude_result.optimized_prompt)
             return claude_result
 
-    add_log(logs, "All optimizer paths failed. Falling back to original prompt.")
+    add_log(logs, "All optimizer paths failed. Falling back to original prompt.", status_callback)
+    emit_event(
+        status_callback,
+        {
+            "type": "step_failed",
+            "step": "optimizer",
+            "message": "All optimizer paths failed",
+            "completed_at": now_iso(),
+            "latency_seconds": None,
+            "provider": None,
+            "model": None,
+            "attempts": 1,
+            "meta": {"strategy": "fallback_original_prompt"},
+            "error": "All optimizer paths failed",
+            "code": "OPTIMIZER_FAILED",
+            "retryable": False,
+        },
+    )
+    emit_output(status_callback, "optimized_prompt", original_prompt)
     return PromptOptimizationResult(
         original_prompt=original_prompt,
         optimized_prompt=original_prompt,
@@ -1009,6 +1252,7 @@ def run_autonomous_loop(
     max_iterations: int = MAX_ITERATIONS,
     options: Optional[Dict[str, Any]] = None,
     logs: Optional[List[str]] = None,
+    status_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> List[IterationRecord]:
     records: List[IterationRecord] = []
 
@@ -1016,12 +1260,14 @@ def run_autonomous_loop(
     claude_state = ClaudeChatState()
 
     options = options or {}
-    optimization_result = optimize_prompt(initial_prompt, options, logs)
+    optimization_result = optimize_prompt(initial_prompt, options, logs, status_callback)
     active_prompt = optimization_result.optimized_prompt.strip() or initial_prompt
-    add_log(logs, f"Active prompt ready. Length={len(active_prompt)}")
+    add_log(logs, f"Active prompt ready. Length={len(active_prompt)}", status_callback)
 
     for iteration in range(1, max_iterations + 1):
-        add_log(logs, f"Iteration {iteration} started")
+        iteration_started_at = now_iso()
+        add_log(logs, f"Iteration {iteration} started", status_callback)
+        emit_stage(status_callback, "running_models", f"Running model iteration {iteration}", steps_completed=1)
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             futures = {
@@ -1030,12 +1276,30 @@ def run_autonomous_loop(
                     f"iteration_{iteration}_openai_initial",
                     lambda: call_openai_new_chat(active_prompt),
                     logs,
+                    False,
+                    None,
+                    status_callback,
+                    {
+                        "provider": "OpenAI",
+                        "model": OPENAI_MODEL,
+                        "iteration": iteration,
+                        "kind": "initial",
+                    },
                 ): "openai",
                 executor.submit(
                     run_step,
                     f"iteration_{iteration}_claude_initial",
                     lambda: call_claude_new_chat(claude_state, active_prompt),
                     logs,
+                    False,
+                    None,
+                    status_callback,
+                    {
+                        "provider": "Claude",
+                        "model": CLAUDE_MODEL,
+                        "iteration": iteration,
+                        "kind": "initial",
+                    },
                 ): "claude",
             }
 
@@ -1056,16 +1320,124 @@ def run_autonomous_loop(
         if openai_result is None or claude_result is None:
             raise RuntimeError("Parallel model execution did not return both provider results")
 
+        emit_output(status_callback, "openai_output", openai_result.text or openai_result.error)
+        emit_output(status_callback, "claude_output", claude_result.text or claude_result.error)
+
+        emit_stage(status_callback, "judging", f"Judging model outputs for iteration {iteration}", steps_completed=3)
+
         judge = run_step(
             f"iteration_{iteration}_judge",
-            lambda: judge_outputs_safe(active_prompt, openai_result, claude_result, logs),
+            lambda: judge_outputs_safe(active_prompt, openai_result, claude_result, logs, status_callback),
             logs,
+            swallow=False,
+            fallback=None,
+            status_callback=status_callback,
+            event_meta={
+                "provider": "OpenAI",
+                "model": JUDGE_MODEL,
+                "iteration": iteration,
+                "kind": "judge",
+            },
+        )
+
+        judge_output = {
+            "winner": judge.winner,
+            "next_action": judge.next_action,
+            "reason": judge.reason,
+            "confidence": judge.confidence,
+            "rerun_target": judge.rerun_target,
+            "follow_up_prompt": judge.follow_up_prompt,
+            "revised_prompt": judge.revised_prompt,
+            "openai_scores": judge.openai_scores.__dict__,
+            "claude_scores": judge.claude_scores.__dict__,
+        }
+        emit_output(status_callback, "judge_output", judge_output)
+        emit_summary(
+            status_callback,
+            {
+                "winner": judge.winner,
+                "next_action": judge.next_action,
+                "confidence": judge.confidence,
+                "reason": judge.reason,
+            },
         )
 
         post_action_result: Optional[ProviderResult] = None
 
         if judge.next_action == "accept":
-            add_log(logs, f"Iteration {iteration} accepted by judge")
+            add_log(logs, f"Iteration {iteration} accepted by judge", status_callback)
+            emit_event(
+                status_callback,
+                {
+                    "type": "step_skipped",
+                    "step": "follow_up",
+                    "message": "No follow-up required",
+                    "completed_at": now_iso(),
+                    "meta": {"iteration": iteration},
+                },
+            )
+            emit_event(
+                status_callback,
+                {
+                    "type": "step_skipped",
+                    "step": "stitch",
+                    "message": "No stitching required",
+                    "completed_at": now_iso(),
+                    "meta": {"iteration": iteration},
+                },
+            )
+
+            record = IterationRecord(
+                iteration=iteration,
+                active_prompt=active_prompt,
+                openai_result=openai_result,
+                claude_result=claude_result,
+                judge_decision=judge,
+                post_action_result=None,
+                prompt_optimization=optimization_result,
+            )
+            records.append(record)
+            emit_iteration(
+                status_callback,
+                {
+                    "iteration": iteration,
+                    "active_prompt": active_prompt,
+                    "winner": judge.winner,
+                    "next_action": judge.next_action,
+                    "confidence": judge.confidence,
+                    "rerun_target": judge.rerun_target,
+                    "openai_status": "completed",
+                    "claude_status": "completed",
+                    "judge_status": "completed",
+                    "started_at": iteration_started_at,
+                    "completed_at": now_iso(),
+                },
+            )
+            break
+
+        if judge.next_action == "revise_prompt_and_rerun":
+            add_log(logs, f"Iteration {iteration} requested revised prompt rerun", status_callback)
+            emit_event(
+                status_callback,
+                {
+                    "type": "step_skipped",
+                    "step": "follow_up",
+                    "message": "Follow-up skipped because judge requested prompt revision and rerun",
+                    "completed_at": now_iso(),
+                    "meta": {"iteration": iteration},
+                },
+            )
+            emit_event(
+                status_callback,
+                {
+                    "type": "step_skipped",
+                    "step": "stitch",
+                    "message": "Stitch skipped because no follow-up output was produced",
+                    "completed_at": now_iso(),
+                    "meta": {"iteration": iteration},
+                },
+            )
+
             records.append(
                 IterationRecord(
                     iteration=iteration,
@@ -1077,25 +1449,28 @@ def run_autonomous_loop(
                     prompt_optimization=optimization_result,
                 )
             )
-            break
-
-        if judge.next_action == "revise_prompt_and_rerun":
-            add_log(logs, f"Iteration {iteration} requested revised prompt rerun")
-            records.append(
-                IterationRecord(
-                    iteration=iteration,
-                    active_prompt=active_prompt,
-                    openai_result=openai_result,
-                    claude_result=claude_result,
-                    judge_decision=judge,
-                    post_action_result=None,
-                    prompt_optimization=optimization_result,
-                )
+            emit_iteration(
+                status_callback,
+                {
+                    "iteration": iteration,
+                    "active_prompt": active_prompt,
+                    "winner": judge.winner,
+                    "next_action": judge.next_action,
+                    "confidence": judge.confidence,
+                    "rerun_target": judge.rerun_target,
+                    "openai_status": "completed",
+                    "claude_status": "completed",
+                    "judge_status": "completed",
+                    "started_at": iteration_started_at,
+                    "completed_at": now_iso(),
+                },
             )
             active_prompt = judge.revised_prompt.strip() or active_prompt
             continue
 
         if judge.next_action == "follow_up_on_winner":
+            emit_stage(status_callback, "follow_up", f"Running follow-up for iteration {iteration}", steps_completed=4)
+
             raw_follow_up_prompt = (
                 judge.follow_up_prompt.strip()
                 or "Please continue and complete the previous answer. Finish any incomplete sections and provide a complete final version."
@@ -1106,13 +1481,23 @@ def run_autonomous_loop(
             if target_provider == "None":
                 target_provider = judge.winner
 
-            add_log(logs, f"Iteration {iteration} follow-up target: {target_provider}")
+            add_log(logs, f"Iteration {iteration} follow-up target: {target_provider}", status_callback)
 
             if target_provider == "OpenAI":
                 post_action_result = run_step(
                     f"iteration_{iteration}_openai_follow_up",
                     lambda: call_openai_follow_up(openai_state, follow_up_prompt),
                     logs,
+                    swallow=False,
+                    fallback=None,
+                    status_callback=status_callback,
+                    event_meta={
+                        "provider": "OpenAI",
+                        "model": OPENAI_MODEL,
+                        "iteration": iteration,
+                        "kind": "follow_up",
+                        "attempts": 1,
+                    },
                 )
 
                 continuation_attempts = 0
@@ -1122,7 +1507,7 @@ def run_autonomous_loop(
                     and continuation_attempts < MAX_CONTINUATION_ATTEMPTS
                 ):
                     continuation_attempts += 1
-                    add_log(logs, f"OpenAI continuation attempt {continuation_attempts}")
+                    add_log(logs, f"OpenAI continuation attempt {continuation_attempts}", status_callback)
                     follow_up_prompt = (
                         "Please continue from where you left off and complete the answer. "
                         "Do not restart. Finish any incomplete sections and provide the full final version."
@@ -1131,6 +1516,16 @@ def run_autonomous_loop(
                         f"iteration_{iteration}_openai_continuation_{continuation_attempts}",
                         lambda: call_openai_follow_up(openai_state, follow_up_prompt),
                         logs,
+                        swallow=False,
+                        fallback=None,
+                        status_callback=status_callback,
+                        event_meta={
+                            "provider": "OpenAI",
+                            "model": OPENAI_MODEL,
+                            "iteration": iteration,
+                            "kind": "continuation",
+                            "attempts": continuation_attempts + 1,
+                        },
                     )
 
             elif target_provider == "Claude":
@@ -1138,6 +1533,16 @@ def run_autonomous_loop(
                     f"iteration_{iteration}_claude_follow_up",
                     lambda: call_claude_follow_up(claude_state, follow_up_prompt),
                     logs,
+                    swallow=False,
+                    fallback=None,
+                    status_callback=status_callback,
+                    event_meta={
+                        "provider": "Claude",
+                        "model": CLAUDE_MODEL,
+                        "iteration": iteration,
+                        "kind": "follow_up",
+                        "attempts": 1,
+                    },
                 )
 
                 continuation_attempts = 0
@@ -1147,7 +1552,7 @@ def run_autonomous_loop(
                     and continuation_attempts < MAX_CONTINUATION_ATTEMPTS
                 ):
                     continuation_attempts += 1
-                    add_log(logs, f"Claude continuation attempt {continuation_attempts}")
+                    add_log(logs, f"Claude continuation attempt {continuation_attempts}", status_callback)
                     follow_up_prompt = (
                         "Please continue from where you left off and complete the answer. "
                         "Do not restart. Finish any incomplete sections and provide the full final version."
@@ -1156,10 +1561,40 @@ def run_autonomous_loop(
                         f"iteration_{iteration}_claude_continuation_{continuation_attempts}",
                         lambda: call_claude_follow_up(claude_state, follow_up_prompt),
                         logs,
+                        swallow=False,
+                        fallback=None,
+                        status_callback=status_callback,
+                        event_meta={
+                            "provider": "Claude",
+                            "model": CLAUDE_MODEL,
+                            "iteration": iteration,
+                            "kind": "continuation",
+                            "attempts": continuation_attempts + 1,
+                        },
                     )
 
             elif target_provider == "Both":
-                add_log(logs, f"Iteration {iteration} requested Both. Using revised prompt for next loop.")
+                add_log(logs, f"Iteration {iteration} requested Both. Using revised prompt for next loop.", status_callback)
+                emit_event(
+                    status_callback,
+                    {
+                        "type": "step_skipped",
+                        "step": "follow_up",
+                        "message": "Direct follow-up skipped because judge requested both models rerun",
+                        "completed_at": now_iso(),
+                        "meta": {"iteration": iteration, "target_provider": target_provider},
+                    },
+                )
+                emit_event(
+                    status_callback,
+                    {
+                        "type": "step_skipped",
+                        "step": "stitch",
+                        "message": "Stitch skipped because no follow-up output was produced",
+                        "completed_at": now_iso(),
+                        "meta": {"iteration": iteration},
+                    },
+                )
                 records.append(
                     IterationRecord(
                         iteration=iteration,
@@ -1171,12 +1606,48 @@ def run_autonomous_loop(
                         prompt_optimization=optimization_result,
                     )
                 )
+                emit_iteration(
+                    status_callback,
+                    {
+                        "iteration": iteration,
+                        "active_prompt": active_prompt,
+                        "winner": judge.winner,
+                        "next_action": judge.next_action,
+                        "confidence": judge.confidence,
+                        "rerun_target": judge.rerun_target,
+                        "openai_status": "completed",
+                        "claude_status": "completed",
+                        "judge_status": "completed",
+                        "started_at": iteration_started_at,
+                        "completed_at": now_iso(),
+                    },
+                )
                 active_prompt = judge.revised_prompt.strip() or follow_up_prompt
                 continue
 
             else:
-                add_log(logs, f"Unexpected rerun_target={target_provider}. Falling back safely.")
+                add_log(logs, f"Unexpected rerun_target={target_provider}. Falling back safely.", status_callback)
                 if judge.revised_prompt.strip():
+                    emit_event(
+                        status_callback,
+                        {
+                            "type": "step_skipped",
+                            "step": "follow_up",
+                            "message": "Follow-up skipped because rerun target was unexpected and revised prompt was used",
+                            "completed_at": now_iso(),
+                            "meta": {"iteration": iteration, "target_provider": target_provider},
+                        },
+                    )
+                    emit_event(
+                        status_callback,
+                        {
+                            "type": "step_skipped",
+                            "step": "stitch",
+                            "message": "Stitch skipped because no follow-up output was produced",
+                            "completed_at": now_iso(),
+                            "meta": {"iteration": iteration},
+                        },
+                    )
                     records.append(
                         IterationRecord(
                             iteration=iteration,
@@ -1188,9 +1659,45 @@ def run_autonomous_loop(
                             prompt_optimization=optimization_result,
                         )
                     )
+                    emit_iteration(
+                        status_callback,
+                        {
+                            "iteration": iteration,
+                            "active_prompt": active_prompt,
+                            "winner": judge.winner,
+                            "next_action": judge.next_action,
+                            "confidence": judge.confidence,
+                            "rerun_target": judge.rerun_target,
+                            "openai_status": "completed",
+                            "claude_status": "completed",
+                            "judge_status": "completed",
+                            "started_at": iteration_started_at,
+                            "completed_at": now_iso(),
+                        },
+                    )
                     active_prompt = judge.revised_prompt.strip()
                     continue
 
+                emit_event(
+                    status_callback,
+                    {
+                        "type": "step_skipped",
+                        "step": "follow_up",
+                        "message": "Follow-up skipped due to unexpected rerun target",
+                        "completed_at": now_iso(),
+                        "meta": {"iteration": iteration, "target_provider": target_provider},
+                    },
+                )
+                emit_event(
+                    status_callback,
+                    {
+                        "type": "step_skipped",
+                        "step": "stitch",
+                        "message": "Stitch skipped because no follow-up output was produced",
+                        "completed_at": now_iso(),
+                        "meta": {"iteration": iteration},
+                    },
+                )
                 records.append(
                     IterationRecord(
                         iteration=iteration,
@@ -1202,12 +1709,33 @@ def run_autonomous_loop(
                         prompt_optimization=optimization_result,
                     )
                 )
+                emit_iteration(
+                    status_callback,
+                    {
+                        "iteration": iteration,
+                        "active_prompt": active_prompt,
+                        "winner": judge.winner,
+                        "next_action": judge.next_action,
+                        "confidence": judge.confidence,
+                        "rerun_target": judge.rerun_target,
+                        "openai_status": "completed",
+                        "claude_status": "completed",
+                        "judge_status": "completed",
+                        "started_at": iteration_started_at,
+                        "completed_at": now_iso(),
+                    },
+                )
                 break
+
+            if post_action_result:
+                emit_output(status_callback, "follow_up_output", post_action_result.text or post_action_result.error)
 
             stitched_result: Optional[ProviderResult] = None
             stitching_enabled = options.get("enable_stitching", ENABLE_STITCHING_BY_DEFAULT)
 
             if post_action_result and stitching_enabled:
+                emit_stage(status_callback, "stitching", f"Stitching final response for iteration {iteration}", steps_completed=5)
+
                 if target_provider == "Claude":
                     base_text = claude_result.text or ""
                     stitched_result = run_step(
@@ -1222,6 +1750,13 @@ def run_autonomous_loop(
                         logs,
                         swallow=True,
                         fallback=None,
+                        status_callback=status_callback,
+                        event_meta={
+                            "provider": "Claude",
+                            "model": CLAUDE_MODEL,
+                            "iteration": iteration,
+                            "kind": "stitch",
+                        },
                     )
                 elif target_provider == "OpenAI":
                     base_text = openai_result.text or ""
@@ -1237,21 +1772,67 @@ def run_autonomous_loop(
                         logs,
                         swallow=True,
                         fallback=None,
+                        status_callback=status_callback,
+                        event_meta={
+                            "provider": "OpenAI",
+                            "model": OPENAI_MODEL,
+                            "iteration": iteration,
+                            "kind": "stitch",
+                        },
                     )
             elif not stitching_enabled:
-                add_log(logs, "Stitching disabled for this run")
-
-            records.append(
-                IterationRecord(
-                    iteration=iteration,
-                    active_prompt=active_prompt,
-                    openai_result=openai_result,
-                    claude_result=claude_result,
-                    judge_decision=judge,
-                    post_action_result=post_action_result,
-                    stitched_result=stitched_result,
-                    prompt_optimization=optimization_result,
+                add_log(logs, "Stitching disabled for this run", status_callback)
+                emit_event(
+                    status_callback,
+                    {
+                        "type": "step_skipped",
+                        "step": "stitch",
+                        "message": "Stitching disabled for this run",
+                        "completed_at": now_iso(),
+                        "meta": {"iteration": iteration},
+                    },
                 )
+            else:
+                emit_event(
+                    status_callback,
+                    {
+                        "type": "step_skipped",
+                        "step": "stitch",
+                        "message": "No stitch produced because no follow-up output was available",
+                        "completed_at": now_iso(),
+                        "meta": {"iteration": iteration},
+                    },
+                )
+
+            if stitched_result:
+                emit_output(status_callback, "stitched_output", stitched_result.text or stitched_result.error)
+
+            record = IterationRecord(
+                iteration=iteration,
+                active_prompt=active_prompt,
+                openai_result=openai_result,
+                claude_result=claude_result,
+                judge_decision=judge,
+                post_action_result=post_action_result,
+                stitched_result=stitched_result,
+                prompt_optimization=optimization_result,
+            )
+            records.append(record)
+            emit_iteration(
+                status_callback,
+                {
+                    "iteration": iteration,
+                    "active_prompt": active_prompt,
+                    "winner": judge.winner,
+                    "next_action": judge.next_action,
+                    "confidence": judge.confidence,
+                    "rerun_target": judge.rerun_target,
+                    "openai_status": "completed",
+                    "claude_status": "completed",
+                    "judge_status": "completed",
+                    "started_at": iteration_started_at,
+                    "completed_at": now_iso(),
+                },
             )
             break
 
@@ -1265,6 +1846,22 @@ def run_autonomous_loop(
                 post_action_result=None,
                 prompt_optimization=optimization_result,
             )
+        )
+        emit_iteration(
+            status_callback,
+            {
+                "iteration": iteration,
+                "active_prompt": active_prompt,
+                "winner": judge.winner,
+                "next_action": judge.next_action,
+                "confidence": judge.confidence,
+                "rerun_target": judge.rerun_target,
+                "openai_status": "completed",
+                "claude_status": "completed",
+                "judge_status": "completed",
+                "started_at": iteration_started_at,
+                "completed_at": now_iso(),
+            },
         )
         break
 
@@ -1295,7 +1892,7 @@ def render_optional_variants(optional_variants: Optional[List[Any]]) -> str:
             rendered_items.append(json.dumps(item, indent=2, ensure_ascii=False))
 
     return "\n\n".join(rendered_items)
-    
+
 
 def score_total(score: ScoreCard) -> int:
     return (
@@ -1708,6 +2305,7 @@ def save_outputs(
         "json_path": f"outputs/{json_filename}",
     }
 
+
 # =========================
 # Wrapper
 # =========================
@@ -1717,6 +2315,7 @@ def run_autonomous_compare(
     max_iterations: int = MAX_ITERATIONS,
     user_id: Optional[str] = None,
     options: Optional[Dict[str, Any]] = None,
+    status_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> Dict[str, Any]:
     options = options or {}
 
@@ -1725,15 +2324,28 @@ def run_autonomous_compare(
     artifacts: List[Dict[str, str]] = []
 
     try:
-        add_log(logs, "Workflow request received")
+        emit_stage(status_callback, "starting", "Workflow request received", steps_completed=0)
+        add_log(logs, "Workflow request received", status_callback)
 
         if not prompt or not prompt.strip():
             raise ValueError("Prompt cannot be empty")
 
-        add_log(logs, f"Prompt length={len(prompt)}")
-        add_log(logs, f"Prompt optimization enabled: {options.get('optimize_prompt', ENABLE_OPTIMIZER_BY_DEFAULT)}")
-        add_log(logs, f"Prompt optimizer strategy: {options.get('optimizer_strategy', 'compare_both')}")
-        add_log(logs, f"Stitching enabled: {options.get('enable_stitching', ENABLE_STITCHING_BY_DEFAULT)}")
+        add_log(logs, f"Prompt length={len(prompt)}", status_callback)
+        add_log(
+            logs,
+            f"Prompt optimization enabled: {options.get('optimize_prompt', ENABLE_OPTIMIZER_BY_DEFAULT)}",
+            status_callback,
+        )
+        add_log(
+            logs,
+            f"Prompt optimizer strategy: {options.get('optimizer_strategy', 'compare_both')}",
+            status_callback,
+        )
+        add_log(
+            logs,
+            f"Stitching enabled: {options.get('enable_stitching', ENABLE_STITCHING_BY_DEFAULT)}",
+            status_callback,
+        )
 
         records = run_step(
             "run_autonomous_loop",
@@ -1742,27 +2354,38 @@ def run_autonomous_compare(
                 max_iterations=max_iterations,
                 options=options,
                 logs=logs,
+                status_callback=status_callback,
             ),
             logs,
+            swallow=False,
+            fallback=None,
+            status_callback=status_callback,
+            event_meta={"kind": "orchestration"},
         )
 
         if not records:
             raise RuntimeError("No iteration records were produced")
 
-        add_log(logs, f"Completed {len(records)} iteration(s)")
+        add_log(logs, f"Completed {len(records)} iteration(s)", status_callback)
 
         last = records[-1]
         final_output = get_final_output_text(last)
-        add_log(logs, "Final output extracted")
+        emit_output(status_callback, "final_output", final_output)
+        add_log(logs, "Final output extracted", status_callback)
         if last.prompt_optimization:
-            add_log(logs, f"Optimizer provider: {last.prompt_optimization.provider}")
+            add_log(logs, f"Optimizer provider: {last.prompt_optimization.provider}", status_callback)
 
+        emit_stage(status_callback, "saving_artifacts", "Saving output artifacts", steps_completed=6)
         output_paths = run_step(
             "save_outputs",
             lambda: save_outputs(records, prompt, open_browser=False),
             logs,
+            swallow=False,
+            fallback=None,
+            status_callback=status_callback,
+            event_meta={"kind": "artifacts"},
         )
-        add_log(logs, "Outputs saved successfully")
+        add_log(logs, "Outputs saved successfully", status_callback)
 
         artifacts.append({
             "type": "html",
@@ -1773,11 +2396,60 @@ def run_autonomous_compare(
             "path": output_paths["json_path"],
         })
 
+        emit_event(
+            status_callback,
+            {
+                "type": "step_completed",
+                "step": "artifacts",
+                "message": "Artifacts saved",
+                "completed_at": now_iso(),
+                "latency_seconds": None,
+                "provider": None,
+                "model": None,
+                "attempts": 1,
+                "meta": {
+                    "html_path": output_paths["html_path"],
+                    "json_path": output_paths["json_path"],
+                },
+            },
+        )
+
+        summary = {
+            "winner": last.judge_decision.winner,
+            "next_action": last.judge_decision.next_action,
+            "confidence": last.judge_decision.confidence,
+            "reason": last.judge_decision.reason,
+            "label": f"{last.judge_decision.winner} selected as best response",
+        }
+        emit_summary(status_callback, summary)
+
         runtime_seconds = round(time.time() - start_time, 2)
+        emit_stage(status_callback, "completed", "Workflow completed successfully", steps_completed=7)
+
+        outputs = {
+            "optimized_prompt": last.prompt_optimization.optimized_prompt if last.prompt_optimization else prompt,
+            "openai_output": last.openai_result.text or last.openai_result.error,
+            "claude_output": last.claude_result.text or last.claude_result.error,
+            "judge_output": {
+                "winner": last.judge_decision.winner,
+                "next_action": last.judge_decision.next_action,
+                "reason": last.judge_decision.reason,
+                "confidence": last.judge_decision.confidence,
+                "rerun_target": last.judge_decision.rerun_target,
+                "follow_up_prompt": last.judge_decision.follow_up_prompt,
+                "revised_prompt": last.judge_decision.revised_prompt,
+                "openai_scores": last.judge_decision.openai_scores.__dict__,
+                "claude_scores": last.judge_decision.claude_scores.__dict__,
+            },
+            "follow_up_output": last.post_action_result.text if last.post_action_result else None,
+            "stitched_output": last.stitched_result.text if last.stitched_result else None,
+            "final_output": final_output,
+        }
 
         return {
-            "status": "success",
-            "summary": f"{last.judge_decision.winner} selected as best response",
+            "status": "completed",
+            "summary": summary,
+            "outputs": outputs,
             "full_output": final_output,
             "artifacts": artifacts,
             "logs": logs,
@@ -1787,11 +2459,27 @@ def run_autonomous_compare(
 
     except Exception as e:
         runtime_seconds = round(time.time() - start_time, 2)
-        add_log(logs, f"Workflow failed: {str(e)}")
+        add_log(logs, f"Workflow failed: {str(e)}", status_callback)
+        emit_stage(status_callback, "failed", str(e))
 
         return {
-            "status": "error",
-            "summary": "Autonomous workflow failed",
+            "status": "failed",
+            "summary": {
+                "winner": None,
+                "next_action": None,
+                "confidence": None,
+                "reason": str(e),
+                "label": "Autonomous workflow failed",
+            },
+            "outputs": {
+                "optimized_prompt": None,
+                "openai_output": None,
+                "claude_output": None,
+                "judge_output": None,
+                "follow_up_output": None,
+                "stitched_output": None,
+                "final_output": None,
+            },
             "full_output": None,
             "artifacts": artifacts,
             "logs": logs,
@@ -1846,7 +2534,7 @@ def main() -> None:
         },
     )
 
-    if result["status"] == "success":
+    if result["status"] == "completed":
         html_artifact = next((a for a in result["artifacts"] if a["type"] == "html"), None)
         if html_artifact:
             try:
@@ -1858,7 +2546,7 @@ def main() -> None:
     print("WORKFLOW RESULT")
     print("=" * 80)
     print(json.dumps(result, indent=2))
-
+    
 
 if __name__ == "__main__":
     main()
