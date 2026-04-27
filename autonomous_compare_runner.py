@@ -1053,13 +1053,14 @@ def optimize_prompt(
                     "use_case": use_case,
                     "tone_style": tone_style,
                     "output_format": output_format,
+                    "used_original_prompt": True,
                 },
             },
         )
         return PromptOptimizationResult(
             original_prompt=original_prompt,
             optimized_prompt=original_prompt,
-            annotated_explanation="Prompt optimization was disabled for this run.",
+            annotated_explanation="Prompt optimization was disabled for this run, so the original prompt was used unchanged.",
             optional_variants=[],
             provider="None",
             strategy="disabled",
