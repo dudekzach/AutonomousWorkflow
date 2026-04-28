@@ -53,15 +53,15 @@
     }
 
     .app-shell {
-      max-width: 1560px;
+      max-width: 1680px;
       margin: 0 auto;
-      padding: 24px;
+      padding: 28px;
     }
 
     .topbar {
       display: grid;
-      grid-template-columns: 1.2fr 2fr;
-      gap: 20px;
+      grid-template-columns: 1.05fr 1.75fr;
+      gap: 24px;
       margin-bottom: 20px;
       align-items: stretch;
     }
@@ -77,7 +77,7 @@
     .summary-card {
       background: var(--panel);
       backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
+      border: 1px solid rgba(148, 163, 184, 0.16);
       border-radius: var(--radius-xl);
       box-shadow: var(--shadow);
     }
@@ -87,7 +87,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 180px;
+      min-height: 200px;
     }
 
     .brand-eyebrow {
@@ -99,17 +99,18 @@
     }
 
     .brand-title {
-      font-size: 28px;
+      font-size: 30px;
       font-weight: 800;
       margin: 8px 0 10px;
       line-height: 1.05;
+      letter-spacing: -0.02em;
     }
 
     .brand-subtitle {
       color: var(--muted);
       font-size: 14px;
       line-height: 1.5;
-      max-width: 44ch;
+      max-width: 40ch;
     }
 
     .health-row {
@@ -130,6 +131,7 @@
       color: var(--subtle);
       font-size: 12px;
       font-weight: 700;
+      min-height: 34px;
     }
 
     .pill.success {
@@ -160,28 +162,30 @@
       padding: 20px;
       display: grid;
       grid-template-rows: auto auto auto;
-      gap: 16px;
+      gap: 18px;
     }
 
     .section-title {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 800;
       letter-spacing: 0.02em;
       color: #f8fafc;
-      margin: 0 0 10px;
+      margin: 0 0 8px;
     }
 
     .section-subtitle {
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.55;
       margin-bottom: 12px;
+      max-width: 74ch;
     }
 
     textarea,
     input,
     select {
       width: 100%;
+      min-height: 46px;
       border: 1px solid var(--border-strong);
       background: rgba(15, 23, 42, 0.9);
       color: var(--text);
@@ -192,7 +196,8 @@
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 96px;
+      max-height: 220px;
       resize: vertical;
       line-height: 1.5;
     }
@@ -203,11 +208,29 @@
       gap: 12px;
     }
 
+    .form-grid-compact {
+      grid-template-columns: 1.6fr 0.85fr 0.85fr;
+      align-items: stretch;
+    }
+
+    .field-note {
+      display: flex;
+      align-items: center;
+      min-height: 52px;
+      border: 1px solid var(--border-strong);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--muted);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
     .actions-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
+      gap: 16px;
       flex-wrap: wrap;
     }
 
@@ -215,7 +238,8 @@
       border: 0;
       background: linear-gradient(135deg, #3b82f6, #2563eb);
       color: white;
-      padding: 14px 18px;
+      min-height: 46px;
+      padding: 14px 20px;
       border-radius: 14px;
       font-weight: 800;
       font-size: 14px;
@@ -231,16 +255,17 @@
     .job-inline-status {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
       color: var(--muted);
       font-size: 13px;
+      justify-content: flex-end;
     }
 
     .dashboard-grid {
       display: grid;
-      grid-template-columns: 320px minmax(0, 1fr) 360px;
-      gap: 20px;
+      grid-template-columns: 280px minmax(0, 1fr) 300px;
+      gap: 18px;
       align-items: start;
     }
 
@@ -248,7 +273,7 @@
     .center-stage,
     .right-rail {
       display: grid;
-      gap: 20px;
+      gap: 18px;
     }
 
     .tracker-card,
@@ -263,14 +288,14 @@
 
     .tracker-list {
       display: grid;
-      gap: 12px;
+      gap: 10px;
       margin-top: 12px;
     }
 
     .tracker-step {
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 14px;
+      padding: 12px 13px;
       background: rgba(15, 23, 42, 0.55);
       position: relative;
     }
@@ -299,12 +324,12 @@
     .tracker-name {
       font-weight: 700;
       color: #f8fafc;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .tracker-meta {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11.5px;
       line-height: 1.45;
     }
 
@@ -329,123 +354,9 @@
       transition: width 0.35s ease;
     }
 
-    .hero-card {
-      padding: 22px;
-      background:
-        radial-gradient(circle at top right, rgba(96,165,250,0.14), transparent 28%),
-        linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.96));
-      border: 1px solid rgba(96,165,250,0.22);
-    }
-
-    .hero-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: start;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .hero-title-wrap h2 {
-      margin: 0 0 8px;
-      font-size: 28px;
-      line-height: 1.1;
-    }
-
-    .hero-title-wrap p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      max-width: 68ch;
-      line-height: 1.55;
-    }
-
-    .hero-badges {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .hero-output {
-      border: 1px solid var(--border);
-      background: rgba(2, 6, 23, 0.45);
-      border-radius: 18px;
-      padding: 18px;
-      min-height: 260px;
-      color: #e2e8f0;
-      line-height: 1.65;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    .hero-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-
-    .secondary-btn {
-      background: rgba(30, 41, 59, 0.9);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 10px 14px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 13px;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .decision-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .metric-tile {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: rgba(15, 23, 42, 0.6);
-      padding: 14px;
-    }
-
-    .metric-label {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 6px;
-    }
-
-    .metric-value {
-      color: #f8fafc;
-      font-weight: 800;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-
-    .decision-body {
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: rgba(15, 23, 42, 0.55);
-      padding: 16px;
-      color: #dbeafe;
-      line-height: 1.6;
-      white-space: pre-wrap;
-    }
-
-    .artifact-list,
-    .summary-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .artifact-item,
-    .summary-item {
+    .summary-item,
+    .artifact-item {
+      min-height: 90px;
       padding: 12px 14px;
       border-radius: 14px;
       border: 1px solid var(--border);
@@ -475,10 +386,136 @@
       line-height: 1.45;
     }
 
+    .hero-card {
+      padding: 24px;
+      min-height: 540px;
+      background:
+        radial-gradient(circle at top right, rgba(96,165,250,0.14), transparent 28%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.96));
+      border: 1px solid rgba(96,165,250,0.22);
+    }
+
+    .hero-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hero-title-wrap h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-title-wrap p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 62ch;
+      line-height: 1.55;
+    }
+
+    .hero-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .hero-output {
+      border: 1px solid var(--border);
+      background: rgba(2, 6, 23, 0.45);
+      border-radius: 18px;
+      padding: 20px;
+      min-height: 360px;
+      max-height: 760px;
+      overflow: auto;
+      color: #e2e8f0;
+      font-size: 15px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .secondary-btn {
+      background: rgba(30, 41, 59, 0.9);
+      color: var(--text);
+      border: 1px solid var(--border);
+      min-height: 46px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .metric-tile {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 14px;
+      min-height: 84px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      color: #f8fafc;
+      font-weight: 800;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    .decision-body {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 16px;
+      color: #dbeafe;
+      min-height: 170px;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .comparison-card {
+      padding: 20px;
+    }
+
     .comparison-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+      gap: 16px;
+      align-items: stretch;
     }
 
     .model-card {
@@ -488,6 +525,8 @@
       padding: 16px;
       display: grid;
       gap: 12px;
+      min-height: 460px;
+      grid-template-rows: auto auto minmax(180px, 1fr) auto auto;
     }
 
     .model-card.winner {
@@ -507,8 +546,9 @@
 
     .model-name {
       font-weight: 800;
-      font-size: 15px;
+      font-size: 16px;
       color: #f8fafc;
+      letter-spacing: -0.01em;
     }
 
     .model-provider {
@@ -518,7 +558,7 @@
     }
 
     .model-score {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 800;
       padding: 8px 10px;
       border-radius: 999px;
@@ -527,12 +567,20 @@
       white-space: nowrap;
     }
 
+    .muted-note {
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.55;
+    }
+
     .model-excerpt {
       color: #dbeafe;
       font-size: 13px;
-      line-height: 1.6;
-      max-height: 140px;
+      line-height: 1.65;
+      min-height: 220px;
+      max-height: none;
       overflow: auto;
+      padding-right: 4px;
       white-space: pre-wrap;
     }
 
@@ -543,7 +591,7 @@
       color: #e2e8f0;
       line-height: 1.6;
       white-space: pre-wrap;
-      max-height: 340px;
+      max-height: 420px;
       overflow: auto;
     }
 
@@ -562,7 +610,8 @@
       border: 1px solid var(--border);
       background: rgba(30, 41, 59, 0.75);
       color: var(--subtle);
-      padding: 8px 12px;
+      min-height: 38px;
+      padding: 8px 14px;
       border-radius: 999px;
       cursor: pointer;
       font-size: 12px;
@@ -578,13 +627,18 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
+    .log-card {
+      position: sticky;
+      top: 18px;
+    }
+
     .logs-box,
     .raw-box {
       border: 1px solid var(--border);
       border-radius: 16px;
       background: rgba(2, 6, 23, 0.48);
-      min-height: 280px;
-      max-height: 620px;
+      min-height: 320px;
+      max-height: 640px;
       overflow: auto;
       padding: 14px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -601,23 +655,68 @@
       padding: 6px 0;
     }
 
-    .muted-note {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
     .hidden {
       display: none !important;
     }
 
-    @media (max-width: 1280px) {
+    @media (min-width: 1500px) {
       .dashboard-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 300px minmax(0, 1fr) 280px;
+      }
+
+      .comparison-grid {
+        gap: 18px;
+      }
+
+      .model-card {
+        min-height: 500px;
+      }
+
+      .model-excerpt {
+        min-height: 250px;
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .app-shell {
+        padding: 20px;
       }
 
       .topbar {
         grid-template-columns: 1fr;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .right-rail {
+        order: 3;
+      }
+
+      .left-rail {
+        order: 2;
+      }
+
+      .center-stage {
+        order: 1;
+      }
+
+      .log-card {
+        position: static;
+      }
+
+      .comparison-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .hero-card {
+        min-height: unset;
+      }
+
+      .hero-output {
+        min-height: 280px;
+        max-height: 560px;
       }
 
       .decision-grid {
@@ -626,10 +725,48 @@
     }
 
     @media (max-width: 760px) {
+      .app-shell {
+        padding: 14px;
+      }
+
+      .brand-card,
+      .run-card,
+      .tracker-card,
+      .summary-card,
+      .artifact-card,
+      .hero-card,
+      .decision-card,
+      .comparison-card,
+      .log-card {
+        border-radius: 18px;
+      }
+
+      .brand-card {
+        min-height: unset;
+        padding: 18px;
+      }
+
+      .brand-title {
+        font-size: 26px;
+      }
+
+      .brand-subtitle {
+        font-size: 13px;
+        max-width: none;
+      }
+
+      .health-row {
+        gap: 8px;
+      }
+
       .form-grid,
-      .comparison-grid,
-      .decision-grid {
+      .form-grid-compact,
+      .comparison-grid {
         grid-template-columns: 1fr;
+      }
+
+      .field-note {
+        min-height: unset;
       }
 
       .hero-header,
@@ -641,25 +778,99 @@
         align-items: start;
       }
 
-      .app-shell {
+      .actions-row {
+        align-items: stretch;
+      }
+
+      .job-inline-status {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 8px;
+      }
+
+      .job-inline-status > span:first-child {
+        width: 100%;
+        color: var(--muted);
+      }
+
+      .decision-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric-value {
+        font-size: 16px;
+      }
+
+      .hero-header {
+        gap: 12px;
+      }
+
+      .hero-badges {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .hero-output {
+        min-height: 240px;
+        max-height: 440px;
+        font-size: 14px;
+        line-height: 1.65;
         padding: 16px;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .secondary-btn,
+      .primary-btn {
+        width: 100%;
+      }
+
+      .model-card {
+        min-height: unset;
+        grid-template-rows: auto auto auto auto auto;
+      }
+
+      .model-excerpt {
+        min-height: 180px;
+        max-height: 260px;
+      }
+
+      .logs-box,
+      .raw-box {
+        min-height: 220px;
+        max-height: 360px;
+      }
+
+      .tabs {
+        gap: 6px;
+      }
+
+      .tab-btn {
+        flex: 1 1 auto;
+        justify-content: center;
       }
     }
 
-    .form-grid-compact {
-      grid-template-columns: 2fr 1fr 1fr;
-    }
+    @media (max-width: 480px) {
+      .decision-grid {
+        grid-template-columns: 1fr;
+      }
 
-    .field-note {
-      display: flex;
-      align-items: center;
-      min-height: 52px;
-      border: 1px solid var(--border-strong);
-      background: rgba(15, 23, 42, 0.9);
-      color: var(--muted);
-      border-radius: 14px;
-      padding: 14px 16px;
-      font-size: 13px;
+      .brand-title {
+        font-size: 24px;
+      }
+
+      .hero-title-wrap h2 {
+        font-size: 22px;
+      }
+
+      .section-title {
+        font-size: 14px;
+      }
     }
   </style>
 </head>
@@ -685,7 +896,7 @@
         <div>
           <h3 class="section-title">Run a workflow</h3>
           <div class="section-subtitle">
-            Submit a prompt, keep the existing async polling flow, and monitor the execution as it moves through optimization, provider runs, judging, and artifact generation.
+            Submit a prompt, monitor each stage live, compare both model responses, and review the final decision with generated deliverables.
           </div>
         </div>
 
@@ -695,7 +906,7 @@
 
         <div class="form-grid form-grid-compact">
           <div class="field-note">
-            Running the current configured OpenAI and Claude workflow.
+            Using the current OpenAI and Claude workflow configuration.
           </div>
           <select id="optimizerToggle" disabled>
             <option value="off" selected>Optimizer: Disabled</option>
@@ -709,7 +920,7 @@
         <div class="actions-row">
           <button id="runBtn" class="primary-btn">Start Workflow</button>
           <div class="job-inline-status">
-            <span>Active Job:</span>
+            <span>Active job</span>
             <span id="jobIdLabel" class="pill">—</span>
             <span id="lastUpdateLabel" class="pill">Updated: —</span>
           </div>
@@ -721,7 +932,7 @@
       <aside class="left-rail">
         <div class="tracker-card">
           <h3 class="section-title">Workflow tracker</h3>
-          <div class="section-subtitle">Live execution stages sourced from the current job state.</div>
+          <div class="section-subtitle">Execution stages rendered from the live job state.</div>
 
           <div class="progress-wrap">
             <div class="progress-bar">
@@ -743,7 +954,7 @@
 
         <div class="artifact-card">
           <h3 class="section-title">Deliverables</h3>
-          <div class="section-subtitle">Generated artifacts and output files from the current run.</div>
+          <div class="section-subtitle">Reports and machine-readable outputs from the completed run.</div>
           <div id="artifactList" class="artifact-list">
             <div class="empty-state">Artifacts will appear here when generation completes.</div>
           </div>
@@ -756,7 +967,7 @@
             <div class="hero-title-wrap">
               <h2>Winning output</h2>
               <p>
-                This is the accepted response selected by the judge after comparing both model outputs, including the reasoning behind the decision and direct access to generated deliverables.
+                This is the accepted response selected after comparing both model outputs, with supporting rationale and direct access to the generated deliverables.
               </p>
             </div>
             <div id="heroBadges" class="hero-badges">
@@ -776,7 +987,7 @@
         <div class="decision-card">
           <h3 class="section-title">Decision center</h3>
           <div class="section-subtitle">
-            Judge recommendation, execution metadata, and outcome context for the active run.
+            Final recommendation, execution metadata, and rationale behind the selected response.
           </div>
 
           <div class="decision-grid">
@@ -804,7 +1015,7 @@
         <div class="comparison-card">
           <h3 class="section-title">Model comparison</h3>
           <div class="section-subtitle">
-            Compare provider outputs side by side and inspect the winning response in context.
+            Compare both provider responses, inspect score breakdowns, and review the winning output in context.
           </div>
 
           <div id="comparisonGrid" class="comparison-grid">
@@ -815,7 +1026,7 @@
 
       <aside class="right-rail">
         <div class="log-card">
-          <h3 class="section-title">Live telemetry</h3>
+          <h3 class="section-title">Execution telemetry</h3>
           <div class="tabs">
             <button class="tab-btn active" data-tab="logsPanel" type="button">Logs</button>
             <button class="tab-btn" data-tab="rawPanel" type="button">Raw payload</button>
@@ -834,556 +1045,556 @@
   </div>
 
   <script>
-  const state = {
-    jobId: null,
-    pollHandle: null,
-    lastPayload: null,
-    autoScrollLogs: true
-  };
-
-  const els = {
-    promptInput: document.getElementById('promptInput'),
-    optimizerToggle: document.getElementById('optimizerToggle'),
-    artifactToggle: document.getElementById('artifactToggle'),
-    runBtn: document.getElementById('runBtn'),
-    jobIdLabel: document.getElementById('jobIdLabel'),
-    lastUpdateLabel: document.getElementById('lastUpdateLabel'),
-
-    topStatusPill: document.getElementById('topStatusPill'),
-    topStagePill: document.getElementById('topStagePill'),
-    topProgressPill: document.getElementById('topProgressPill'),
-    progressFill: document.getElementById('progressFill'),
-
-    trackerList: document.getElementById('trackerList'),
-    summaryList: document.getElementById('summaryList'),
-    artifactList: document.getElementById('artifactList'),
-
-    heroBadges: document.getElementById('heroBadges'),
-    heroOutput: document.getElementById('heroOutput'),
-    copyWinnerBtn: document.getElementById('copyWinnerBtn'),
-    openWinnerArtifactBtn: document.getElementById('openWinnerArtifactBtn'),
-
-    metricStatus: document.getElementById('metricStatus'),
-    metricStage: document.getElementById('metricStage'),
-    metricWinner: document.getElementById('metricWinner'),
-    metricDuration: document.getElementById('metricDuration'),
-    decisionBody: document.getElementById('decisionBody'),
-
-    comparisonGrid: document.getElementById('comparisonGrid'),
-    logsBox: document.getElementById('logsBox'),
-    rawBox: document.getElementById('rawBox')
-  };
-
-  function safeText(value, fallback = '—') {
-    if (value === null || value === undefined || value === '') return fallback;
-    if (typeof value === 'object') return JSON.stringify(value, null, 2);
-    return String(value);
-  }
-
-  function escapeHtml(str) {
-    return safeText(str, '').replace(/[&<>"']/g, (m) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    }[m]));
-  }
-
-  function titleCase(value) {
-    return safeText(value, '—')
-      .replace(/[_-]/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  function statusClass(status) {
-    const s = (status || '').toLowerCase();
-    if (['completed', 'complete', 'success', 'succeeded'].includes(s)) return 'success';
-    if (['failed', 'error'].includes(s)) return 'danger';
-    if (['running', 'in_progress', 'active'].includes(s)) return 'info';
-    if (['queued', 'pending', 'skipped'].includes(s)) return 'warning';
-    return '';
-  }
-
-  function getWinner(payload) {
-    return payload?.summary?.winner || payload?.outputs?.judge_output?.winner || '—';
-  }
-
-  function getJudge(payload) {
-    return payload?.outputs?.judge_output || payload?.summary || {};
-  }
-
-  function getFinalOutput(payload) {
-    return (
-      payload?.outputs?.final_output ||
-      payload?.outputs?.claude_output ||
-      payload?.outputs?.openai_output ||
-      'No winning output available yet.'
-    );
-  }
-
-  function getWinningScoreLabel(payload) {
-    const winner = String(getWinner(payload) || '').toLowerCase();
-    const judge = getJudge(payload);
-
-    if (winner === 'claude' && judge?.claude_scores?.overall_strength !== undefined) {
-      return String(judge.claude_scores.overall_strength);
-    }
-
-    if (winner === 'openai' && judge?.openai_scores?.overall_strength !== undefined) {
-      return String(judge.openai_scores.overall_strength);
-    }
-
-    if (judge?.confidence) {
-      return titleCase(judge.confidence);
-    }
-
-    return '—';
-  }
-
-  function getNumericProgress(payload) {
-    const p = payload?.progress;
-
-    if (typeof p === 'number') return p;
-    if (typeof p === 'string' && !isNaN(Number(p))) return Number(p);
-
-    if (p && typeof p === 'object') {
-      if (typeof p.percent === 'number') return p.percent;
-      if (typeof p.value === 'number') return p.value;
-      if (typeof p.progress === 'number') return p.progress;
-    }
-
-    return 0;
-  }
-
-  function getDurationLabel(payload) {
-    const timing = payload?.timing || {};
-
-    if (typeof timing.total_runtime_seconds === 'number') {
-      return `${timing.total_runtime_seconds.toFixed(2)}s`;
-    }
-
-    if (typeof timing.total_seconds === 'number') {
-      return `${timing.total_seconds.toFixed(2)}s`;
-    }
-
-    if (typeof timing.duration_seconds === 'number') {
-      return `${timing.duration_seconds.toFixed(2)}s`;
-    }
-
-    if (typeof payload?.duration_seconds === 'number') {
-      return `${payload.duration_seconds.toFixed(2)}s`;
-    }
-
-    return '—';
-  }
-
-  function getOptimizerModeLabel(payload) {
-    const optimizerStep = payload?.steps?.optimizer;
-    const requestOptions = payload?.request?.options || {};
-
-    if (
-      optimizerStep?.status === 'skipped' ||
-      optimizerStep?.meta?.used_original_prompt === true ||
-      requestOptions.force_optimizer_off === true ||
-      requestOptions.optimize_prompt === false ||
-      requestOptions.optimizer_enabled === false ||
-      requestOptions.enable_optimizer === false
-    ) {
-      return 'Disabled / original prompt';
-    }
-
-    return 'Optimized / default path';
-  }
-
-  function getModelComparisonItems(payload) {
-    const judge = getJudge(payload);
-
-    return [
-      {
-        id: 'openai',
-        provider: payload?.steps?.openai?.provider || 'OpenAI',
-        model: payload?.steps?.openai?.model || 'OpenAI',
-        output: payload?.outputs?.openai_output || '',
-        scores: judge?.openai_scores || null
-      },
-      {
-        id: 'claude',
-        provider: payload?.steps?.claude?.provider || 'Claude',
-        model: payload?.steps?.claude?.model || 'Claude',
-        output: payload?.outputs?.claude_output || '',
-        scores: judge?.claude_scores || null
-      }
-    ].filter(item => item.output);
-  }
-
-  function formatScoreSummary(scores) {
-    if (!scores || typeof scores !== 'object') return 'No detailed score breakdown.';
-    return Object.entries(scores)
-      .map(([key, value]) => `${titleCase(key)}: ${value}`)
-      .join(' • ');
-  }
-
-  function normalizeArtifacts(payload) {
-    const artifacts = payload?.artifacts;
-    if (!artifacts) return [];
-
-    if (Array.isArray(artifacts)) return artifacts;
-
-    if (typeof artifacts === 'object') {
-      return Object.entries(artifacts).map(([key, value]) => {
-        const normalizedValue =
-          typeof value === 'string' && !value.startsWith('http') && !value.startsWith('/')
-            ? `/${value}`
-            : value;
-
-        return { name: key, url: normalizedValue };
-      });
-    }
-
-    return [];
-  }
-
-  function renderTopStatus(payload) {
-    const status = safeText(payload?.status, 'idle').toLowerCase();
-    const stage = safeText(payload?.stage);
-    const progress = getNumericProgress(payload);
-
-    els.topStatusPill.className = `pill ${statusClass(status)}`;
-    els.topStatusPill.textContent = titleCase(status);
-
-    els.topStagePill.textContent = `Stage: ${titleCase(stage)}`;
-    els.topProgressPill.textContent = `Progress: ${Math.max(0, Math.min(100, progress))}%`;
-    els.progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
-
-    els.metricStatus.textContent = titleCase(status);
-    els.metricStage.textContent = titleCase(stage);
-  }
-
-  function renderTracker(payload) {
-    const stepsObj = payload?.steps || {};
-    const entries = Object.entries(stepsObj);
-
-    if (!entries.length) {
-      els.trackerList.innerHTML = '<div class="empty-state">Start a run to populate workflow stages.</div>';
-      return;
-    }
-
-    els.trackerList.innerHTML = entries.map(([key, step]) => {
-      const stepStatus = String(step?.status || 'pending').toLowerCase();
-      const classes = [
-        'tracker-step',
-        ['running', 'active', 'in_progress'].includes(stepStatus) ? 'active' : '',
-        ['completed', 'success', 'done'].includes(stepStatus) ? 'complete' : '',
-        ['failed', 'error'].includes(stepStatus) ? 'failed' : ''
-      ].join(' ').trim();
-
-      const detail = step?.message || 'Awaiting execution details.';
-      const metaBits = [];
-      if (step?.provider) metaBits.push(`Provider: ${step.provider}`);
-      if (step?.model) metaBits.push(`Model: ${step.model}`);
-      if (step?.latency_seconds !== undefined && step?.latency_seconds !== null) {
-        metaBits.push(`Duration: ${step.latency_seconds}s`);
-      }
-
-      return `
-        <div class="${classes}">
-          <div class="tracker-topline">
-            <div class="tracker-name">${escapeHtml(titleCase(key))}</div>
-            <div class="pill ${statusClass(stepStatus)}">${escapeHtml(titleCase(stepStatus))}</div>
-          </div>
-          <div class="tracker-meta">${escapeHtml(detail)}</div>
-          ${metaBits.length ? `<div class="tracker-meta" style="margin-top:8px;">${escapeHtml(metaBits.join(' • '))}</div>` : ''}
-        </div>
-      `;
-    }).join('');
-  }
-
-  function renderSummary(payload) {
-    const progress = getNumericProgress(payload);
-
-    const items = [
-      { label: 'Job ID', value: state.jobId || payload?.job_id || '—' },
-      { label: 'Winner', value: getWinner(payload) },
-      { label: 'Progress', value: `${progress}%` },
-      { label: 'Stage', value: titleCase(payload?.stage || '—') },
-      { label: 'Optimizer Mode', value: getOptimizerModeLabel(payload) },
-      { label: 'Generated At', value: payload?.updated_at || payload?.completed_at || '—' }
-    ];
-
-    els.summaryList.innerHTML = items.map(item => `
-      <div class="summary-item">
-        <div class="summary-item-top">
-          <div class="summary-name">${escapeHtml(item.label)}</div>
-        </div>
-        <div class="summary-meta">${escapeHtml(safeText(item.value))}</div>
-      </div>
-    `).join('');
-  }
-
-  function renderArtifacts(payload) {
-    const artifacts = normalizeArtifacts(payload);
-    if (!artifacts.length) {
-      els.artifactList.innerHTML = '<div class="empty-state">Artifacts will appear here when generation completes.</div>';
-      els.openWinnerArtifactBtn.classList.add('hidden');
-      els.openWinnerArtifactBtn.removeAttribute('href');
-      return;
-    }
-
-    els.artifactList.innerHTML = artifacts.map((artifact, idx) => {
-      const url = artifact.url || artifact.href || artifact.path || artifact.file || '#';
-      const name = artifact.name || artifact.label || `Artifact ${idx + 1}`;
-
-      let meta = artifact.type || artifact.kind || artifact.description || 'Generated deliverable';
-      if (typeof url === 'string' && url.endsWith('.html')) meta = 'Presentation-ready report';
-      if (typeof url === 'string' && url.endsWith('.json')) meta = 'Structured run record';
-
-      return `
-        <div class="artifact-item">
-          <div class="artifact-item-top">
-            <div class="artifact-name">${escapeHtml(name)}</div>
-            <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="pill info">Open</a>
-          </div>
-          <div class="artifact-meta">${escapeHtml(meta)}</div>
-        </div>
-      `;
-    }).join('');
-
-    const primary = artifacts[0];
-    const primaryUrl = primary?.url || primary?.href || primary?.path || primary?.file;
-    if (primaryUrl) {
-      els.openWinnerArtifactBtn.href = primaryUrl;
-      els.openWinnerArtifactBtn.classList.remove('hidden');
-    }
-  }
-
-  function renderHero(payload) {
-    const winnerName = getWinner(payload);
-    const scoreLabel = getWinningScoreLabel(payload);
-    const winnerText = getFinalOutput(payload);
-
-    els.heroBadges.innerHTML = `
-      <span class="pill success">Winner: ${escapeHtml(safeText(winnerName))}</span>
-      <span class="pill info">Score: ${escapeHtml(safeText(scoreLabel))}</span>
-    `;
-
-    els.heroOutput.textContent = winnerText;
-    els.metricWinner.textContent = safeText(winnerName);
-    els.metricDuration.textContent = getDurationLabel(payload);
-  }
-
-  function renderDecision(payload) {
-    const judge = getJudge(payload);
-    const parts = [];
-
-    if (payload?.summary?.label) {
-      parts.push(`Decision summary:\n${payload.summary.label}`);
-    }
-
-    if (judge?.reason) {
-      parts.push(`Why this won:\n${judge.reason}`);
-    }
-
-    if (judge?.confidence) {
-      parts.push(`Judge confidence: ${titleCase(judge.confidence)}`);
-    }
-
-    if (payload?.summary?.next_action) {
-      parts.push(`Decision outcome: ${titleCase(payload.summary.next_action)}`);
-    }
-
-    els.decisionBody.textContent =
-      parts.join('\n\n') || 'Judge reasoning and decision notes will appear here.';
-  }
-
-  function renderComparison(payload) {
-    const winner = String(getWinner(payload) || '').toLowerCase();
-    const models = getModelComparisonItems(payload);
-
-    if (!models.length) {
-      els.comparisonGrid.innerHTML = '<div class="empty-state">Comparison cards will populate once provider outputs are available.</div>';
-      return;
-    }
-
-    els.comparisonGrid.innerHTML = models.map((item, index) => {
-      const isWinner = item.id === winner;
-      const excerpt = safeText(item.output || '', '').slice(0, 420) || 'No output available.';
-      const scoreSummary = formatScoreSummary(item.scores);
-      const fullId = `model-full-${index}`;
-
-      return `
-        <div class="model-card ${isWinner ? 'winner' : ''}">
-          <div class="model-top">
-            <div>
-              <div class="model-name">${escapeHtml(safeText(item.model))}</div>
-              <div class="model-provider">${escapeHtml(safeText(item.provider))}</div>
-            </div>
-            <div class="model-score">${escapeHtml(isWinner ? 'Winning response' : 'Candidate')}</div>
-          </div>
-
-          <div class="muted-note">${escapeHtml(scoreSummary)}</div>
-          <div class="model-excerpt">${escapeHtml(excerpt)}</div>
-
-          <div>
-            <button class="secondary-btn" type="button" onclick="toggleModelFull('${fullId}')">
-              ${isWinner ? 'Inspect winning output' : 'Expand full output'}
-            </button>
-          </div>
-
-          <div id="${fullId}" class="model-full">${escapeHtml(safeText(item.output || 'No full output available.'))}</div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function renderLogs(payload) {
-    const logs = Array.isArray(payload?.logs) ? payload.logs : [];
-    if (!logs.length) {
-      els.logsBox.textContent = 'No logs yet.';
-      return;
-    }
-
-    const wasNearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
-    els.logsBox.textContent = logs.map(line => typeof line === 'string' ? line : JSON.stringify(line)).join('\n');
-
-    if (state.autoScrollLogs && wasNearBottom) {
-      els.logsBox.scrollTop = els.logsBox.scrollHeight;
-    }
-  }
-
-  function renderRaw(payload) {
-    els.rawBox.textContent = JSON.stringify(payload, null, 2);
-  }
-
-  function renderPayload(payload) {
-    state.lastPayload = payload;
-
-    renderTopStatus(payload);
-    renderTracker(payload);
-    renderSummary(payload);
-    renderArtifacts(payload);
-    renderHero(payload);
-    renderDecision(payload);
-    renderComparison(payload);
-    renderLogs(payload);
-    renderRaw(payload);
-
-    els.lastUpdateLabel.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
-
-    const status = String(payload?.status || '').toLowerCase();
-    if (['completed', 'failed', 'error'].includes(status)) {
-      stopPolling();
-      els.runBtn.disabled = false;
-      els.runBtn.textContent = status === 'completed' ? 'Run Another Workflow' : 'Retry Workflow';
-    }
-  }
-
-  async function startRun() {
-    const prompt = els.promptInput.value.trim();
-    if (!prompt) {
-      alert('Please enter a prompt before starting the workflow.');
-      return;
-    }
-
-    els.runBtn.disabled = true;
-    els.runBtn.textContent = 'Starting...';
-
-    const requestBody = {
-      prompt,
-      options: {
-        force_optimizer_off: true,
-        generate_artifacts: els.artifactToggle.value !== 'off'
-      }
+    const state = {
+      jobId: null,
+      pollHandle: null,
+      lastPayload: null,
+      autoScrollLogs: true
     };
 
-    try {
-      const response = await fetch('/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
+    const els = {
+      promptInput: document.getElementById('promptInput'),
+      optimizerToggle: document.getElementById('optimizerToggle'),
+      artifactToggle: document.getElementById('artifactToggle'),
+      runBtn: document.getElementById('runBtn'),
+      jobIdLabel: document.getElementById('jobIdLabel'),
+      lastUpdateLabel: document.getElementById('lastUpdateLabel'),
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || `Run request failed with ${response.status}`);
+      topStatusPill: document.getElementById('topStatusPill'),
+      topStagePill: document.getElementById('topStagePill'),
+      topProgressPill: document.getElementById('topProgressPill'),
+      progressFill: document.getElementById('progressFill'),
+
+      trackerList: document.getElementById('trackerList'),
+      summaryList: document.getElementById('summaryList'),
+      artifactList: document.getElementById('artifactList'),
+
+      heroBadges: document.getElementById('heroBadges'),
+      heroOutput: document.getElementById('heroOutput'),
+      copyWinnerBtn: document.getElementById('copyWinnerBtn'),
+      openWinnerArtifactBtn: document.getElementById('openWinnerArtifactBtn'),
+
+      metricStatus: document.getElementById('metricStatus'),
+      metricStage: document.getElementById('metricStage'),
+      metricWinner: document.getElementById('metricWinner'),
+      metricDuration: document.getElementById('metricDuration'),
+      decisionBody: document.getElementById('decisionBody'),
+
+      comparisonGrid: document.getElementById('comparisonGrid'),
+      logsBox: document.getElementById('logsBox'),
+      rawBox: document.getElementById('rawBox')
+    };
+
+    function safeText(value, fallback = '—') {
+      if (value === null || value === undefined || value === '') return fallback;
+      if (typeof value === 'object') return JSON.stringify(value, null, 2);
+      return String(value);
+    }
+
+    function escapeHtml(str) {
+      return safeText(str, '').replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[m]));
+    }
+
+    function titleCase(value) {
+      return safeText(value, '—')
+        .replace(/[_-]/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function statusClass(status) {
+      const s = (status || '').toLowerCase();
+      if (['completed', 'complete', 'success', 'succeeded'].includes(s)) return 'success';
+      if (['failed', 'error'].includes(s)) return 'danger';
+      if (['running', 'in_progress', 'active'].includes(s)) return 'info';
+      if (['queued', 'pending', 'skipped'].includes(s)) return 'warning';
+      return '';
+    }
+
+    function getWinner(payload) {
+      return payload?.summary?.winner || payload?.outputs?.judge_output?.winner || '—';
+    }
+
+    function getJudge(payload) {
+      return payload?.outputs?.judge_output || payload?.summary || {};
+    }
+
+    function getFinalOutput(payload) {
+      return (
+        payload?.outputs?.final_output ||
+        payload?.outputs?.claude_output ||
+        payload?.outputs?.openai_output ||
+        'No winning output available yet.'
+      );
+    }
+
+    function getWinningScoreLabel(payload) {
+      const winner = String(getWinner(payload) || '').toLowerCase();
+      const judge = getJudge(payload);
+
+      if (winner === 'claude' && judge?.claude_scores?.overall_strength !== undefined) {
+        return String(judge.claude_scores.overall_strength);
       }
 
-      const result = await response.json();
-      const jobId = result.job_id || result.id;
-      if (!jobId) throw new Error('No job_id returned from /run');
-
-      state.jobId = jobId;
-      els.jobIdLabel.textContent = jobId;
-      els.runBtn.textContent = 'Running...';
-
-      stopPolling();
-      await pollStatus();
-      state.pollHandle = setInterval(pollStatus, 2000);
-    } catch (error) {
-      els.runBtn.disabled = false;
-      els.runBtn.textContent = 'Start Workflow';
-      alert(`Failed to start workflow: ${error.message}`);
-    }
-  }
-
-  async function pollStatus() {
-    if (!state.jobId) return;
-
-    try {
-      const response = await fetch(`/status/${encodeURIComponent(state.jobId)}`);
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || `Status request failed with ${response.status}`);
+      if (winner === 'openai' && judge?.openai_scores?.overall_strength !== undefined) {
+        return String(judge.openai_scores.overall_strength);
       }
 
-      const payload = await response.json();
-      renderPayload(payload);
-    } catch (error) {
-      console.error('Polling error:', error);
+      if (judge?.confidence) {
+        return titleCase(judge.confidence);
+      }
+
+      return '—';
     }
-  }
 
-  function stopPolling() {
-    if (state.pollHandle) {
-      clearInterval(state.pollHandle);
-      state.pollHandle = null;
+    function getNumericProgress(payload) {
+      const p = payload?.progress;
+
+      if (typeof p === 'number') return p;
+      if (typeof p === 'string' && !isNaN(Number(p))) return Number(p);
+
+      if (p && typeof p === 'object') {
+        if (typeof p.percent === 'number') return p.percent;
+        if (typeof p.value === 'number') return p.value;
+        if (typeof p.progress === 'number') return p.progress;
+      }
+
+      return 0;
     }
-  }
 
-  function toggleModelFull(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('open');
-  }
-  window.toggleModelFull = toggleModelFull;
+    function getDurationLabel(payload) {
+      const timing = payload?.timing || {};
 
-  els.runBtn.addEventListener('click', startRun);
+      if (typeof timing.total_runtime_seconds === 'number') {
+        return `${timing.total_runtime_seconds.toFixed(2)}s`;
+      }
 
-  els.copyWinnerBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(els.heroOutput.textContent || '');
-      els.copyWinnerBtn.textContent = 'Copied';
-      setTimeout(() => {
-        els.copyWinnerBtn.textContent = 'Copy winning output';
-      }, 1200);
-    } catch (err) {
-      console.error(err);
+      if (typeof timing.total_seconds === 'number') {
+        return `${timing.total_seconds.toFixed(2)}s`;
+      }
+
+      if (typeof timing.duration_seconds === 'number') {
+        return `${timing.duration_seconds.toFixed(2)}s`;
+      }
+
+      if (typeof payload?.duration_seconds === 'number') {
+        return `${payload.duration_seconds.toFixed(2)}s`;
+      }
+
+      return '—';
     }
-  });
 
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(tab).classList.add('active');
+    function getOptimizerModeLabel(payload) {
+      const optimizerStep = payload?.steps?.optimizer;
+      const requestOptions = payload?.request?.options || {};
+
+      if (
+        optimizerStep?.status === 'skipped' ||
+        optimizerStep?.meta?.used_original_prompt === true ||
+        requestOptions.force_optimizer_off === true ||
+        requestOptions.optimize_prompt === false ||
+        requestOptions.optimizer_enabled === false ||
+        requestOptions.enable_optimizer === false
+      ) {
+        return 'Disabled / original prompt';
+      }
+
+      return 'Optimized / default path';
+    }
+
+    function getModelComparisonItems(payload) {
+      const judge = getJudge(payload);
+
+      return [
+        {
+          id: 'openai',
+          provider: payload?.steps?.openai?.provider || 'OpenAI',
+          model: payload?.steps?.openai?.model || 'OpenAI',
+          output: payload?.outputs?.openai_output || '',
+          scores: judge?.openai_scores || null
+        },
+        {
+          id: 'claude',
+          provider: payload?.steps?.claude?.provider || 'Claude',
+          model: payload?.steps?.claude?.model || 'Claude',
+          output: payload?.outputs?.claude_output || '',
+          scores: judge?.claude_scores || null
+        }
+      ].filter(item => item.output);
+    }
+
+    function formatScoreSummary(scores) {
+      if (!scores || typeof scores !== 'object') return 'No detailed score breakdown.';
+      return Object.entries(scores)
+        .map(([key, value]) => `${titleCase(key)}: ${value}`)
+        .join(' • ');
+    }
+
+    function normalizeArtifacts(payload) {
+      const artifacts = payload?.artifacts;
+      if (!artifacts) return [];
+
+      if (Array.isArray(artifacts)) return artifacts;
+
+      if (typeof artifacts === 'object') {
+        return Object.entries(artifacts).map(([key, value]) => {
+          const normalizedValue =
+            typeof value === 'string' && !value.startsWith('http') && !value.startsWith('/')
+              ? `/${value}`
+              : value;
+
+          return { name: key, url: normalizedValue };
+        });
+      }
+
+      return [];
+    }
+
+    function renderTopStatus(payload) {
+      const status = safeText(payload?.status, 'idle').toLowerCase();
+      const stage = safeText(payload?.stage);
+      const progress = getNumericProgress(payload);
+
+      els.topStatusPill.className = `pill ${statusClass(status)}`;
+      els.topStatusPill.textContent = titleCase(status);
+
+      els.topStagePill.textContent = `Stage: ${titleCase(stage)}`;
+      els.topProgressPill.textContent = `Progress: ${Math.max(0, Math.min(100, progress))}%`;
+      els.progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+
+      els.metricStatus.textContent = titleCase(status);
+      els.metricStage.textContent = titleCase(stage);
+    }
+
+    function renderTracker(payload) {
+      const stepsObj = payload?.steps || {};
+      const entries = Object.entries(stepsObj);
+
+      if (!entries.length) {
+        els.trackerList.innerHTML = '<div class="empty-state">Start a run to populate workflow stages.</div>';
+        return;
+      }
+
+      els.trackerList.innerHTML = entries.map(([key, step]) => {
+        const stepStatus = String(step?.status || 'pending').toLowerCase();
+        const classes = [
+          'tracker-step',
+          ['running', 'active', 'in_progress'].includes(stepStatus) ? 'active' : '',
+          ['completed', 'success', 'done'].includes(stepStatus) ? 'complete' : '',
+          ['failed', 'error'].includes(stepStatus) ? 'failed' : ''
+        ].join(' ').trim();
+
+        const detail = step?.message || 'Awaiting execution details.';
+        const metaBits = [];
+        if (step?.provider) metaBits.push(`Provider: ${step.provider}`);
+        if (step?.model) metaBits.push(`Model: ${step.model}`);
+        if (step?.latency_seconds !== undefined && step?.latency_seconds !== null) {
+          metaBits.push(`Duration: ${step.latency_seconds}s`);
+        }
+
+        return `
+          <div class="${classes}">
+            <div class="tracker-topline">
+              <div class="tracker-name">${escapeHtml(titleCase(key))}</div>
+              <div class="pill ${statusClass(stepStatus)}">${escapeHtml(titleCase(stepStatus))}</div>
+            </div>
+            <div class="tracker-meta">${escapeHtml(detail)}</div>
+            ${metaBits.length ? `<div class="tracker-meta" style="margin-top:8px;">${escapeHtml(metaBits.join(' • '))}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSummary(payload) {
+      const progress = getNumericProgress(payload);
+
+      const items = [
+        { label: 'Job ID', value: state.jobId || payload?.job_id || '—' },
+        { label: 'Winner', value: getWinner(payload) },
+        { label: 'Progress', value: `${progress}%` },
+        { label: 'Stage', value: titleCase(payload?.stage || '—') },
+        { label: 'Optimizer Mode', value: getOptimizerModeLabel(payload) },
+        { label: 'Generated At', value: payload?.updated_at || payload?.completed_at || '—' }
+      ];
+
+      els.summaryList.innerHTML = items.map(item => `
+        <div class="summary-item">
+          <div class="summary-item-top">
+            <div class="summary-name">${escapeHtml(item.label)}</div>
+          </div>
+          <div class="summary-meta">${escapeHtml(safeText(item.value))}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderArtifacts(payload) {
+      const artifacts = normalizeArtifacts(payload);
+      if (!artifacts.length) {
+        els.artifactList.innerHTML = '<div class="empty-state">Artifacts will appear here when generation completes.</div>';
+        els.openWinnerArtifactBtn.classList.add('hidden');
+        els.openWinnerArtifactBtn.removeAttribute('href');
+        return;
+      }
+
+      els.artifactList.innerHTML = artifacts.map((artifact, idx) => {
+        const url = artifact.url || artifact.href || artifact.path || artifact.file || '#';
+        const name = artifact.name || artifact.label || `Artifact ${idx + 1}`;
+
+        let meta = artifact.type || artifact.kind || artifact.description || 'Generated deliverable';
+        if (typeof url === 'string' && url.endsWith('.html')) meta = 'Presentation-ready report';
+        if (typeof url === 'string' && url.endsWith('.json')) meta = 'Structured run record';
+
+        return `
+          <div class="artifact-item">
+            <div class="artifact-item-top">
+              <div class="artifact-name">${escapeHtml(name)}</div>
+              <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="pill info">Open</a>
+            </div>
+            <div class="artifact-meta">${escapeHtml(meta)}</div>
+          </div>
+        `;
+      }).join('');
+
+      const primary = artifacts[0];
+      const primaryUrl = primary?.url || primary?.href || primary?.path || primary?.file;
+      if (primaryUrl) {
+        els.openWinnerArtifactBtn.href = primaryUrl;
+        els.openWinnerArtifactBtn.classList.remove('hidden');
+      }
+    }
+
+    function renderHero(payload) {
+      const winnerName = getWinner(payload);
+      const scoreLabel = getWinningScoreLabel(payload);
+      const winnerText = getFinalOutput(payload);
+
+      els.heroBadges.innerHTML = `
+        <span class="pill success">Winner: ${escapeHtml(safeText(winnerName))}</span>
+        <span class="pill info">Score: ${escapeHtml(safeText(scoreLabel))}</span>
+      `;
+
+      els.heroOutput.textContent = winnerText;
+      els.metricWinner.textContent = safeText(winnerName);
+      els.metricDuration.textContent = getDurationLabel(payload);
+    }
+
+    function renderDecision(payload) {
+      const judge = getJudge(payload);
+      const parts = [];
+
+      if (payload?.summary?.label) {
+        parts.push(`Decision summary:\n${payload.summary.label}`);
+      }
+
+      if (judge?.reason) {
+        parts.push(`Why this won:\n${judge.reason}`);
+      }
+
+      if (judge?.confidence) {
+        parts.push(`Judge confidence: ${titleCase(judge.confidence)}`);
+      }
+
+      if (payload?.summary?.next_action) {
+        parts.push(`Decision outcome: ${titleCase(payload.summary.next_action)}`);
+      }
+
+      els.decisionBody.textContent =
+        parts.join('\n\n') || 'Judge reasoning and decision notes will appear here.';
+    }
+
+    function renderComparison(payload) {
+      const winner = String(getWinner(payload) || '').toLowerCase();
+      const models = getModelComparisonItems(payload);
+
+      if (!models.length) {
+        els.comparisonGrid.innerHTML = '<div class="empty-state">Comparison cards will populate once provider outputs are available.</div>';
+        return;
+      }
+
+      els.comparisonGrid.innerHTML = models.map((item, index) => {
+        const isWinner = item.id === winner;
+        const excerpt = safeText(item.output || '', '').slice(0, 420) || 'No output available.';
+        const scoreSummary = formatScoreSummary(item.scores);
+        const fullId = `model-full-${index}`;
+
+        return `
+          <div class="model-card ${isWinner ? 'winner' : ''}">
+            <div class="model-top">
+              <div>
+                <div class="model-name">${escapeHtml(safeText(item.model))}</div>
+                <div class="model-provider">${escapeHtml(safeText(item.provider))}</div>
+              </div>
+              <div class="model-score">${escapeHtml(isWinner ? 'Winning response' : 'Candidate')}</div>
+            </div>
+
+            <div class="muted-note">${escapeHtml(scoreSummary)}</div>
+            <div class="model-excerpt">${escapeHtml(excerpt)}</div>
+
+            <div>
+              <button class="secondary-btn" type="button" onclick="toggleModelFull('${fullId}')">
+                ${isWinner ? 'Inspect winning output' : 'Expand full output'}
+              </button>
+            </div>
+
+            <div id="${fullId}" class="model-full">${escapeHtml(safeText(item.output || 'No full output available.'))}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderLogs(payload) {
+      const logs = Array.isArray(payload?.logs) ? payload.logs : [];
+      if (!logs.length) {
+        els.logsBox.textContent = 'No logs yet.';
+        return;
+      }
+
+      const wasNearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
+      els.logsBox.textContent = logs.map(line => typeof line === 'string' ? line : JSON.stringify(line)).join('\n');
+
+      if (state.autoScrollLogs && wasNearBottom) {
+        els.logsBox.scrollTop = els.logsBox.scrollHeight;
+      }
+    }
+
+    function renderRaw(payload) {
+      els.rawBox.textContent = JSON.stringify(payload, null, 2);
+    }
+
+    function renderPayload(payload) {
+      state.lastPayload = payload;
+
+      renderTopStatus(payload);
+      renderTracker(payload);
+      renderSummary(payload);
+      renderArtifacts(payload);
+      renderHero(payload);
+      renderDecision(payload);
+      renderComparison(payload);
+      renderLogs(payload);
+      renderRaw(payload);
+
+      els.lastUpdateLabel.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+
+      const status = String(payload?.status || '').toLowerCase();
+      if (['completed', 'failed', 'error'].includes(status)) {
+        stopPolling();
+        els.runBtn.disabled = false;
+        els.runBtn.textContent = status === 'completed' ? 'Run Another Workflow' : 'Retry Workflow';
+      }
+    }
+
+    async function startRun() {
+      const prompt = els.promptInput.value.trim();
+      if (!prompt) {
+        alert('Please enter a prompt before starting the workflow.');
+        return;
+      }
+
+      els.runBtn.disabled = true;
+      els.runBtn.textContent = 'Starting...';
+
+      const requestBody = {
+        prompt,
+        options: {
+          force_optimizer_off: true,
+          generate_artifacts: els.artifactToggle.value !== 'off'
+        }
+      };
+
+      try {
+        const response = await fetch('/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || `Run request failed with ${response.status}`);
+        }
+
+        const result = await response.json();
+        const jobId = result.job_id || result.id;
+        if (!jobId) throw new Error('No job_id returned from /run');
+
+        state.jobId = jobId;
+        els.jobIdLabel.textContent = jobId;
+        els.runBtn.textContent = 'Running...';
+
+        stopPolling();
+        await pollStatus();
+        state.pollHandle = setInterval(pollStatus, 2000);
+      } catch (error) {
+        els.runBtn.disabled = false;
+        els.runBtn.textContent = 'Start Workflow';
+        alert(`Failed to start workflow: ${error.message}`);
+      }
+    }
+
+    async function pollStatus() {
+      if (!state.jobId) return;
+
+      try {
+        const response = await fetch(`/status/${encodeURIComponent(state.jobId)}`);
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || `Status request failed with ${response.status}`);
+        }
+
+        const payload = await response.json();
+        renderPayload(payload);
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }
+
+    function stopPolling() {
+      if (state.pollHandle) {
+        clearInterval(state.pollHandle);
+        state.pollHandle = null;
+      }
+    }
+
+    function toggleModelFull(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('open');
+    }
+    window.toggleModelFull = toggleModelFull;
+
+    els.runBtn.addEventListener('click', startRun);
+
+    els.copyWinnerBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(els.heroOutput.textContent || '');
+        els.copyWinnerBtn.textContent = 'Copied';
+        setTimeout(() => {
+          els.copyWinnerBtn.textContent = 'Copy winning output';
+        }, 1200);
+      } catch (err) {
+        console.error(err);
+      }
     });
-  });
 
-  els.logsBox.addEventListener('scroll', () => {
-    const nearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
-    state.autoScrollLogs = nearBottom;
-  });
-</script>
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(tab).classList.add('active');
+      });
+    });
+
+    els.logsBox.addEventListener('scroll', () => {
+      const nearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
+      state.autoScrollLogs = nearBottom;
+    });
+  </script>
 </body>
 </html>
