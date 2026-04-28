@@ -677,12 +677,12 @@
           <textarea id="promptInput" placeholder="Describe the task you want the workflow to solve..."></textarea>
         </div>
 
-        <div class="form-grid">
-          <input id="modelAInput" type="text" placeholder="Model A label (optional)" />
-          <input id="modelBInput" type="text" placeholder="Model B label (optional)" />
-          <select id="optimizerToggle">
-            <option value="default">Optimizer: Default</option>
-            <option value="off">Optimizer: Off</option>
+        <div class="form-grid form-grid-compact">
+          <div class="field-note">
+            Running the current configured OpenAI and Claude workflow.
+          </div>
+          <select id="optimizerToggle" disabled>
+            <option value="off" selected>Optimizer: Disabled</option>
           </select>
           <select id="artifactToggle">
             <option value="on">Artifacts: On</option>
@@ -827,8 +827,6 @@
 
     const els = {
       promptInput: document.getElementById('promptInput'),
-      modelAInput: document.getElementById('modelAInput'),
-      modelBInput: document.getElementById('modelBInput'),
       optimizerToggle: document.getElementById('optimizerToggle'),
       artifactToggle: document.getElementById('artifactToggle'),
       runBtn: document.getElementById('runBtn'),
@@ -983,21 +981,23 @@
     function normalizeArtifacts(payload) {
       const artifacts = payload?.artifacts;
       if (!artifacts) return [];
-
+  
       if (Array.isArray(artifacts)) return artifacts;
-
+  
       if (typeof artifacts === 'object') {
         return Object.entries(artifacts).map(([key, value]) => {
-          if (typeof value === 'string') {
-            return { name: key, url: value };
-          }
-          return { name: key, ...value };
+          const normalizedValue =
+            typeof value === 'string' && !value.startsWith('http') && !value.startsWith('/')
+              ? `/${value}`
+              : value;
+  
+          return { name: key, url: normalizedValue };
         });
       }
-
+  
       return [];
     }
-
+    
     function renderTopStatus(payload) {
       const status = safeText(payload?.status, 'idle').toLowerCase();
       const stage = safeText(payload?.stage);
@@ -1015,34 +1015,38 @@
     }
 
     function renderTracker(payload) {
-      const steps = Array.isArray(payload?.steps) ? payload.steps : [];
-      if (!steps.length) {
+      const stepsObj = payload?.steps || {};
+      const entries = Object.entries(stepsObj);
+  
+      if (!entries.length) {
         els.trackerList.innerHTML = '<div class="empty-state">Start a run to populate workflow stages.</div>';
         return;
       }
-
-      els.trackerList.innerHTML = steps.map(step => {
-        const stepStatus = String(step.status || 'pending').toLowerCase();
+  
+      els.trackerList.innerHTML = entries.map(([key, step]) => {
+        const stepStatus = String(step?.status || 'pending').toLowerCase();
         const classes = [
           'tracker-step',
           ['running', 'active', 'in_progress'].includes(stepStatus) ? 'active' : '',
           ['completed', 'success', 'done'].includes(stepStatus) ? 'complete' : '',
           ['failed', 'error'].includes(stepStatus) ? 'failed' : ''
         ].join(' ').trim();
-
-        const detail = step.message || step.detail || step.description || '';
+  
+        const detail = step?.message || 'Awaiting execution details.';
         const metaBits = [];
-        if (step.started_at) metaBits.push(`Started: ${step.started_at}`);
-        if (step.completed_at) metaBits.push(`Completed: ${step.completed_at}`);
-        if (step.duration_seconds !== undefined) metaBits.push(`Duration: ${step.duration_seconds}s`);
-
+        if (step?.provider) metaBits.push(`Provider: ${step.provider}`);
+        if (step?.model) metaBits.push(`Model: ${step.model}`);
+        if (step?.latency_seconds !== undefined && step?.latency_seconds !== null) {
+          metaBits.push(`Duration: ${step.latency_seconds}s`);
+        }
+  
         return `
           <div class="${classes}">
             <div class="tracker-topline">
-              <div class="tracker-name">${escapeHtml(titleCase(step.name || step.stage || 'Step'))}</div>
+              <div class="tracker-name">${escapeHtml(titleCase(key))}</div>
               <div class="pill ${statusClass(stepStatus)}">${escapeHtml(titleCase(stepStatus))}</div>
             </div>
-            <div class="tracker-meta">${escapeHtml(detail || 'Awaiting execution details.')}</div>
+            <div class="tracker-meta">${escapeHtml(detail)}</div>
             ${metaBits.length ? `<div class="tracker-meta" style="margin-top:8px;">${escapeHtml(metaBits.join(' • '))}</div>` : ''}
           </div>
         `;
@@ -1050,25 +1054,17 @@
     }
 
     function renderSummary(payload) {
-      const presentation = buildPresentationState(payload);
-      const judge = presentation?.judge || {};
-      const optimization = presentation?.optimization || {};
       const progress = getNumericProgress(payload);
-
+  
       const items = [
-        { label: 'Job ID', value: state.jobId || '—' },
-        { label: 'Winner', value: judge?.winner || '—' },
+        { label: 'Job ID', value: state.jobId || payload?.job_id || '—' },
+        { label: 'Winner', value: getWinner(payload) },
         { label: 'Progress', value: `${progress}%` },
         { label: 'Stage', value: titleCase(payload?.stage || '—') },
-        {
-          label: 'Optimizer Mode',
-          value: optimization?.strategy === 'disabled'
-            ? 'Disabled / original prompt'
-            : (optimization?.strategy || 'Optimized / default path')
-        },
+        { label: 'Optimizer Mode', value: getOptimizerModeLabel(payload) },
         { label: 'Generated At', value: payload?.updated_at || payload?.completed_at || '—' }
       ];
-
+  
       els.summaryList.innerHTML = items.map(item => `
         <div class="summary-item">
           <div class="summary-item-top">
@@ -1116,87 +1112,59 @@
     }
 
     function renderHero(payload) {
-      const presentation = buildPresentationState(payload);
-      const judge = presentation?.judge || {};
-      const winningResult = getWinningResult(presentation);
-
-      const winnerName = judge?.winner || winningResult?.provider || '—';
-      const scoreLabel = getWinnerScoreLabel(presentation);
-      const winnerText =
-        winningResult?.text ||
-        winningResult?.output ||
-        winningResult?.content ||
-        'No winning output available yet.';
-
+      const winnerName = getWinner(payload);
+      const scoreLabel = getWinningScoreLabel(payload);
+      const winnerText = getFinalOutput(payload);
+  
       els.heroBadges.innerHTML = `
         <span class="pill success">Winner: ${escapeHtml(safeText(winnerName))}</span>
         <span class="pill info">Score: ${escapeHtml(safeText(scoreLabel))}</span>
       `;
-
+  
       els.heroOutput.textContent = winnerText;
       els.metricWinner.textContent = safeText(winnerName);
       els.metricDuration.textContent = getDurationLabel(payload);
     }
 
     function renderDecision(payload) {
-      const presentation = buildPresentationState(payload);
-      const judge = presentation?.judge || {};
-      const optimization = presentation?.optimization || {};
-
+      const judge = getJudge(payload);
       const parts = [];
-
+  
+      if (payload?.summary?.label) {
+        parts.push(`Decision summary:\n${payload.summary.label}`);
+      }
+  
       if (judge?.reason) {
         parts.push(`Why this won:\n${judge.reason}`);
       }
-
+  
       if (judge?.confidence) {
         parts.push(`Judge confidence: ${titleCase(judge.confidence)}`);
       }
-
-      if (judge?.next_action) {
-        parts.push(`Decision outcome: ${titleCase(judge.next_action)}`);
+  
+      if (payload?.summary?.next_action) {
+        parts.push(`Decision outcome: ${titleCase(payload.summary.next_action)}`);
       }
-
-      if (optimization?.annotated_explanation) {
-        parts.push(`Prompt strategy:\n${optimization.annotated_explanation}`);
-      }
-
+  
       els.decisionBody.textContent =
         parts.join('\n\n') || 'Judge reasoning and decision notes will appear here.';
     }
-
+    
     function renderComparison(payload) {
-      const presentation = buildPresentationState(payload);
-      const winner = String(presentation?.judge?.winner || '').toLowerCase();
-
-      const models = [
-        presentation?.openai ? {
-          id: 'openai',
-          provider: presentation.openai.provider || 'OpenAI',
-          model: presentation.openai.model || 'OpenAI',
-          output: presentation.openai.text || '',
-          scores: presentation?.judge?.openai_scores || null
-        } : null,
-        presentation?.claude ? {
-          id: 'claude',
-          provider: presentation.claude.provider || 'Claude',
-          model: presentation.claude.model || 'Claude',
-          output: presentation.claude.text || '',
-          scores: presentation?.judge?.claude_scores || null
-        } : null
-      ].filter(Boolean);
-
+      const winner = String(getWinner(payload) || '').toLowerCase();
+      const models = getModelComparisonItems(payload);
+  
       if (!models.length) {
         els.comparisonGrid.innerHTML = '<div class="empty-state">Comparison cards will populate once provider outputs are available.</div>';
         return;
       }
-
+  
       els.comparisonGrid.innerHTML = models.map((item, index) => {
         const isWinner = item.id === winner;
         const excerpt = safeText(item.output || '', '').slice(0, 420) || 'No output available.';
         const scoreSummary = formatScoreSummary(item.scores);
         const fullId = `model-full-${index}`;
-
+  
         return `
           <div class="model-card ${isWinner ? 'winner' : ''}">
             <div class="model-top">
@@ -1206,16 +1174,16 @@
               </div>
               <div class="model-score">${escapeHtml(isWinner ? 'Winning response' : 'Candidate')}</div>
             </div>
-
+  
             <div class="muted-note">${escapeHtml(scoreSummary)}</div>
             <div class="model-excerpt">${escapeHtml(excerpt)}</div>
-
+  
             <div>
               <button class="secondary-btn" type="button" onclick="toggleModelFull('${fullId}')">
                 ${isWinner ? 'Inspect winning output' : 'Expand full output'}
               </button>
             </div>
-
+  
             <div id="${fullId}" class="model-full">${escapeHtml(safeText(item.output || 'No full output available.'))}</div>
           </div>
         `;
@@ -1265,11 +1233,13 @@
     }
 
     async function startRun() {
-      const prompt = els.promptInput.value.trim();
-      if (!prompt) {
-        alert('Please enter a prompt before starting the workflow.');
-        return;
-      }
+      const requestBody = {
+        prompt,
+        options: {
+          force_optimizer_off: true,
+          generate_artifacts: els.artifactToggle.value !== 'off'
+        }
+      };
 
       els.runBtn.disabled = true;
       els.runBtn.textContent = 'Starting...';
