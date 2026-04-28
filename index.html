@@ -952,21 +952,113 @@
       );
     }
 
-    function renderTopStatus(payload) {
-      const status = safeText(payload?.status, 'idle').toLowerCase();
-      const stage = safeText(payload?.stage);
-      const progress = Number(payload?.progress || 0);
-
-      els.topStatusPill.className = `pill ${statusClass(status)}`;
-      els.topStatusPill.textContent = titleCase(status);
-
-      els.topStagePill.textContent = `Stage: ${titleCase(stage)}`;
-      els.topProgressPill.textContent = `Progress: ${Math.max(0, Math.min(100, progress))}%`;
-      els.progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
-
-      els.metricStatus.textContent = titleCase(status);
-      els.metricStage.textContent = titleCase(stage);
+<script>
+  function getLatestRecord(payload) {
+    if (Array.isArray(payload?.records) && payload.records.length > 0) {
+      return payload.records[payload.records.length - 1];
     }
+    return null;
+  }
+
+  function buildPresentationState(payload) {
+    const record = getLatestRecord(payload);
+
+    return {
+      record,
+      openai: record?.openai_result || null,
+      claude: record?.claude_result || null,
+      judge: record?.judge_decision || payload?.outputs?.judge || payload?.summary?.judge || payload?.judge || null,
+      optimization: record?.prompt_optimization || null
+    };
+  }
+
+  function getWinningProvider(presentation) {
+    return presentation?.judge?.winner || null;
+  }
+
+  function getWinningResult(presentation) {
+    const winner = String(getWinningProvider(presentation) || '').toLowerCase();
+    if (winner === 'claude') return presentation?.claude || null;
+    if (winner === 'openai') return presentation?.openai || null;
+    return null;
+  }
+
+  function getWinnerScoreLabel(presentation) {
+    const winner = String(getWinningProvider(presentation) || '').toLowerCase();
+    const judge = presentation?.judge || {};
+
+    if (winner === 'claude' && judge?.claude_scores?.overall_strength !== undefined) {
+      return String(judge.claude_scores.overall_strength);
+    }
+
+    if (winner === 'openai' && judge?.openai_scores?.overall_strength !== undefined) {
+      return String(judge.openai_scores.overall_strength);
+    }
+
+    if (judge?.confidence) {
+      return titleCase(judge.confidence);
+    }
+
+    return '—';
+  }
+
+  function getNumericProgress(payload) {
+    const p = payload?.progress;
+
+    if (typeof p === 'number') return p;
+    if (typeof p === 'string' && !isNaN(Number(p))) return Number(p);
+
+    if (p && typeof p === 'object') {
+      if (typeof p.percent === 'number') return p.percent;
+      if (typeof p.value === 'number') return p.value;
+      if (typeof p.progress === 'number') return p.progress;
+    }
+
+    return 0;
+  }
+
+  function getDurationLabel(payload) {
+    const timing = payload?.timing || {};
+
+    if (typeof timing.total_seconds === 'number') {
+      return `${timing.total_seconds.toFixed(1)}s`;
+    }
+
+    if (typeof timing.duration_seconds === 'number') {
+      return `${timing.duration_seconds.toFixed(1)}s`;
+    }
+
+    if (typeof payload?.duration_seconds === 'number') {
+      return `${payload.duration_seconds.toFixed(1)}s`;
+    }
+
+    return '—';
+  }
+
+  function formatScoreSummary(scores) {
+    if (!scores || typeof scores !== 'object') return 'No detailed score breakdown.';
+    return Object.entries(scores)
+      .map(([key, value]) => `${titleCase(key)}: ${value}`)
+      .join(' • ');
+  }
+    
+<script>
+  function renderTopStatus(payload) {
+    const status = safeText(payload?.status, 'idle').toLowerCase();
+    const stage = safeText(payload?.stage);
+    const progress = getNumericProgress(payload);
+
+    els.topStatusPill.className = `pill ${statusClass(status)}`;
+    els.topStatusPill.textContent = titleCase(status);
+
+    els.topStagePill.textContent = `Stage: ${titleCase(stage)}`;
+    els.topProgressPill.textContent = `Progress: ${Math.max(0, Math.min(100, progress))}%`;
+    els.progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+
+    els.metricStatus.textContent = titleCase(status);
+    els.metricStage.textContent = titleCase(stage);
+  }
+</script>
 
     function renderTracker(payload) {
       const steps = Array.isArray(payload?.steps) ? payload.steps : [];
@@ -1003,26 +1095,32 @@
       }).join('');
     }
 
-    function renderSummary(payload, winner) {
-      const summary = payload?.summary || {};
-      const items = [
-        { label: 'Job ID', value: state.jobId || '—' },
-        { label: 'Winner', value: winner?.provider || winner?.model || summary?.winner || '—' },
-        { label: 'Progress', value: `${payload?.progress ?? 0}%` },
-        { label: 'Stage', value: titleCase(payload?.stage || '—') },
-        { label: 'Optimizer Mode', value: summary?.used_original_prompt ? 'Original prompt used' : 'Optimized / default path' },
-        { label: 'Generated At', value: payload?.updated_at || payload?.completed_at || '—' }
-      ];
+    <script>
+  function renderSummary(payload) {
+    const presentation = buildPresentationState(payload);
+    const judge = presentation?.judge || {};
+    const optimization = presentation?.optimization || {};
+    const progress = getNumericProgress(payload);
 
-      els.summaryList.innerHTML = items.map(item => `
-        <div class="summary-item">
-          <div class="summary-item-top">
-            <div class="summary-name">${escapeHtml(item.label)}</div>
-          </div>
-          <div class="summary-meta">${escapeHtml(safeText(item.value))}</div>
+    const items = [
+      { label: 'Job ID', value: state.jobId || '—' },
+      { label: 'Winner', value: judge?.winner || '—' },
+      { label: 'Progress', value: `${progress}%` },
+      { label: 'Stage', value: titleCase(payload?.stage || '—') },
+      { label: 'Optimizer Mode', value: optimization?.strategy === 'disabled' ? 'Disabled / original prompt' : (optimization?.strategy || 'Optimized / default path') },
+      { label: 'Generated At', value: payload?.updated_at || payload?.completed_at || '—' }
+    ];
+
+    els.summaryList.innerHTML = items.map(item => `
+      <div class="summary-item">
+        <div class="summary-item-top">
+          <div class="summary-name">${escapeHtml(item.label)}</div>
         </div>
-      `).join('');
-    }
+        <div class="summary-meta">${escapeHtml(safeText(item.value))}</div>
+      </div>
+    `).join('');
+  }
+</script>
 
     function renderArtifacts(payload) {
       const artifacts = normalizeArtifacts(payload);
@@ -1056,68 +1154,118 @@
       }
     }
 
-    function renderHero(payload, winner) {
-      const summary = payload?.summary || {};
-      const outputs = payload?.outputs || {};
-      const judge = outputs?.judge || summary?.judge || payload?.judge || {};
-      const winnerText = winner?.output || winner?.raw?.output || winner?.raw?.text || 'No winning output available yet.';
-      const winnerLabel = winner?.provider || winner?.model || judge?.winner || summary?.winner || '—';
-      const scoreLabel = winner?.score ?? judge?.score ?? '—';
+    <script>
+  function renderHero(payload) {
+    const presentation = buildPresentationState(payload);
+    const judge = presentation?.judge || {};
+    const winningResult = getWinningResult(presentation);
 
-      els.heroBadges.innerHTML = `
-        <span class="pill success">Winner: ${escapeHtml(safeText(winnerLabel))}</span>
-        <span class="pill info">Score: ${escapeHtml(safeText(scoreLabel))}</span>
-      `;
+    const winnerName = judge?.winner || winningResult?.provider || '—';
+    const scoreLabel = getWinnerScoreLabel(presentation);
+    const winnerText =
+      winningResult?.text ||
+      winningResult?.output ||
+      winningResult?.content ||
+      'No winning output available yet.';
 
-      els.heroOutput.textContent = winnerText || 'No winning output available yet.';
-      els.metricWinner.textContent = safeText(winnerLabel);
-      els.metricDuration.textContent = formatDuration(payload);
+    els.heroBadges.innerHTML = `
+      <span class="pill success">Winner: ${escapeHtml(safeText(winnerName))}</span>
+      <span class="pill info">Score: ${escapeHtml(safeText(scoreLabel))}</span>
+    `;
+
+    els.heroOutput.textContent = winnerText;
+    els.metricWinner.textContent = safeText(winnerName);
+    els.metricDuration.textContent = getDurationLabel(payload);
+  }
+</script>
+
+    <script>
+  function renderDecision(payload) {
+    const presentation = buildPresentationState(payload);
+    const judge = presentation?.judge || {};
+    const optimization = presentation?.optimization || {};
+
+    const parts = [];
+
+    if (judge?.reason) {
+      parts.push(`Why this won:\n${judge.reason}`);
     }
 
-    function renderDecision(payload) {
-      els.decisionBody.textContent = formatJudgeReasoning(payload);
+    if (judge?.confidence) {
+      parts.push(`Judge confidence: ${titleCase(judge.confidence)}`);
     }
 
-    function renderComparison(payload, winner) {
-      const outputs = normalizeOutputs(payload);
-      if (!outputs.length) {
-        els.comparisonGrid.innerHTML = '<div class="empty-state">Comparison cards will populate once provider outputs are available.</div>';
-        return;
-      }
+    if (judge?.next_action) {
+      parts.push(`Decision outcome: ${titleCase(judge.next_action)}`);
+    }
 
-      els.comparisonGrid.innerHTML = outputs.map((item, index) => {
-        const isWinner = winner && (
-          item.id === winner.id ||
-          item.provider === winner.provider ||
-          item.model === winner.model
-        );
+    if (optimization?.annotated_explanation) {
+      parts.push(`Prompt strategy:\n${optimization.annotated_explanation}`);
+    }
 
-        const excerpt = safeText(item.output || '', '').slice(0, 420) || 'No output available.';
-        const fullId = `model-full-${index}`;
+    els.decisionBody.textContent =
+      parts.join('\n\n') || 'Judge reasoning and decision notes will appear here.';
+  }
+</script>
+  
+    <script>
+  function renderComparison(payload) {
+    const presentation = buildPresentationState(payload);
+    const winner = String(presentation?.judge?.winner || '').toLowerCase();
 
-        return `
-          <div class="model-card ${isWinner ? 'winner' : ''}">
-            <div class="model-top">
-              <div>
-                <div class="model-name">${escapeHtml(safeText(item.model || item.provider || 'Model output'))}</div>
-                <div class="model-provider">${escapeHtml(safeText(item.provider || item.id || 'Provider'))}</div>
-              </div>
-              <div class="model-score">${escapeHtml(item.score !== undefined ? `Score: ${item.score}` : (isWinner ? 'Selected winner' : 'Candidate'))}</div>
-            </div>
+    const models = [
+      presentation?.openai ? {
+        id: 'openai',
+        provider: presentation.openai.provider || 'OpenAI',
+        model: presentation.openai.model || 'OpenAI',
+        output: presentation.openai.text || '',
+        scores: presentation?.judge?.openai_scores || null
+      } : null,
+      presentation?.claude ? {
+        id: 'claude',
+        provider: presentation.claude.provider || 'Claude',
+        model: presentation.claude.model || 'Claude',
+        output: presentation.claude.text || '',
+        scores: presentation?.judge?.claude_scores || null
+      } : null
+    ].filter(Boolean);
 
-            <div class="model-excerpt">${escapeHtml(excerpt)}</div>
+    if (!models.length) {
+      els.comparisonGrid.innerHTML = '<div class="empty-state">Comparison cards will populate once provider outputs are available.</div>';
+      return;
+    }
 
+    els.comparisonGrid.innerHTML = models.map((item, index) => {
+      const isWinner = item.id === winner;
+      const excerpt = safeText(item.output || '', '').slice(0, 420) || 'No output available.';
+      const scoreSummary = formatScoreSummary(item.scores);
+      const fullId = `model-full-${index}`;
+
+      return `
+        <div class="model-card ${isWinner ? 'winner' : ''}">
+          <div class="model-top">
             <div>
-              <button class="secondary-btn" type="button" onclick="toggleModelFull('${fullId}')">
-                ${isWinner ? 'Inspect winning output' : 'Expand full output'}
-              </button>
+              <div class="model-name">${escapeHtml(safeText(item.model))}</div>
+              <div class="model-provider">${escapeHtml(safeText(item.provider))}</div>
             </div>
-
-            <div id="${fullId}" class="model-full">${escapeHtml(safeText(item.output || 'No full output available.'))}</div>
+            <div class="model-score">${escapeHtml(isWinner ? 'Winning response' : 'Candidate')}</div>
           </div>
-        `;
-      }).join('');
-    }
+
+          <div class="muted-note">${escapeHtml(scoreSummary)}</div>
+          <div class="model-excerpt">${escapeHtml(excerpt)}</div>
+
+          <div>
+            <button class="secondary-btn" type="button" onclick="toggleModelFull('${fullId}')">
+              ${isWinner ? 'Inspect winning output' : 'Expand full output'}
+            </button>
+          </div>
+
+          <div id="${fullId}" class="model-full">${escapeHtml(safeText(item.output || 'No full output available.'))}</div>
+        </div>
+      `;
+    }).join('');
+  }
+</script>
 
     function renderLogs(payload) {
       const logs = Array.isArray(payload?.logs) ? payload.logs : [];
@@ -1138,32 +1286,30 @@
       els.rawBox.textContent = JSON.stringify(payload, null, 2);
     }
 
-    function renderPayload(payload) {
-      state.lastPayload = payload;
+    <script>
+  function renderPayload(payload) {
+    state.lastPayload = payload;
 
-      renderTopStatus(payload);
-      renderTracker(payload);
+    renderTopStatus(payload);
+    renderTracker(payload);
+    renderSummary(payload);
+    renderArtifacts(payload);
+    renderHero(payload);
+    renderDecision(payload);
+    renderComparison(payload);
+    renderLogs(payload);
+    renderRaw(payload);
 
-      const modelOutputs = normalizeOutputs(payload);
-      const winner = findWinner(payload, modelOutputs);
+    els.lastUpdateLabel.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
 
-      renderSummary(payload, winner);
-      renderArtifacts(payload);
-      renderHero(payload, winner);
-      renderDecision(payload);
-      renderComparison(payload, winner);
-      renderLogs(payload);
-      renderRaw(payload);
-
-      els.lastUpdateLabel.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
-
-      const status = String(payload?.status || '').toLowerCase();
-      if (['completed', 'failed', 'error'].includes(status)) {
-        stopPolling();
-        els.runBtn.disabled = false;
-        els.runBtn.textContent = status === 'completed' ? 'Run Another Workflow' : 'Retry Workflow';
-      }
+    const status = String(payload?.status || '').toLowerCase();
+    if (['completed', 'failed', 'error'].includes(status)) {
+      stopPolling();
+      els.runBtn.disabled = false;
+      els.runBtn.textContent = status === 'completed' ? 'Run Another Workflow' : 'Retry Workflow';
     }
+  }
+</script>
 
     async function startRun() {
       const prompt = els.promptInput.value.trim();
