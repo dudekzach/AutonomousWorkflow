@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autonomous Workflow Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(17, 24, 39, 0.82);
+      --panel-2: rgba(15, 23, 42, 0.92);
+      --panel-3: rgba(30, 41, 59, 0.7);
+      --border: rgba(148, 163, 184, 0.18);
+      --border-strong: rgba(148, 163, 184, 0.28);
+      --text: #e5edf7;
+      --muted: #94a3b8;
+      --subtle: #cbd5e1;
+      --accent: #60a5fa;
+      --accent-2: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      --radius-xl: 22px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+      --success-bg: rgba(34, 197, 94, 0.15);
+      --warning-bg: rgba(245, 158, 11, 0.15);
+      --danger-bg: rgba(239, 68, 68, 0.15);
+      --blue-bg: rgba(96, 165, 250, 0.15);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background:
+      radial-gradient(circle at top left, rgba(96,165,250,0.15), transparent 28%),
+      radial-gradient(circle at top right, rgba(34,197,94,0.10), transparent 25%),
+      linear-gradient(180deg, #0b1020 0%, #0f172a 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: #93c5fd; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .app-shell {
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1.2fr 2fr;
+      gap: 20px;
+      margin-bottom: 20px;
+      align-items: stretch;
+    }
+
+    .brand-card,
+    .run-card,
+    .panel-card,
+    .hero-card,
+    .comparison-card,
+    .log-card,
+    .artifact-card,
+    .tracker-card,
+    .decision-card,
+    .summary-card {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .brand-card {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 180px;
+    }
+
+    .brand-eyebrow {
+      color: var(--accent);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+
+    .brand-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 8px 0 10px;
+      line-height: 1.05;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 44ch;
+    }
+
+    .health-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--panel-3);
+      border: 1px solid var(--border);
+      color: var(--subtle);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .pill.success { background: var(--success-bg); color: #86efac; border-color: rgba(34,197,94,0.25); }
+    .pill.warning { background: var(--warning-bg); color: #fcd34d; border-color: rgba(245,158,11,0.25); }
+    .pill.danger { background: var(--danger-bg); color: #fca5a5; border-color: rgba(239,68,68,0.25); }
+    .pill.info { background: var(--blue-bg); color: #93c5fd; border-color: rgba(96,165,250,0.25); }
+
+    .run-card {
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 16px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #f8fafc;
+      margin: 0 0 10px;
+    }
+
+    .section-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--border-strong);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .primary-btn {
+      border: 0;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
+    }
+
+    .primary-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .job-inline-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr) 360px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .left-rail,
+    .center-stage,
+    .right-rail {
+      display: grid;
+      gap: 20px;
+    }
+
+    .tracker-card,
+    .summary-card,
+    .artifact-card,
+    .hero-card,
+    .decision-card,
+    .comparison-card,
+    .log-card {
+      padding: 18px;
+    }
+
+    .tracker-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .tracker-step {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(15, 23, 42, 0.55);
+      position: relative;
+    }
+
+    .tracker-step.active {
+      border-color: rgba(96, 165, 250, 0.45);
+      box-shadow: inset 0 0 0 1px rgba(96,165,250,0.22);
+    }
+
+    .tracker-step.complete {
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+
+    .tracker-step.failed {
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .tracker-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .tracker-name {
+      font-weight: 700;
+      color: #f8fafc;
+      font-size: 14px;
+    }
+
+    .tracker-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .progress-wrap {
+      margin-top: 12px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(148, 163, 184, 0.14);
+      border: 1px solid var(--border);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #3b82f6, #22c55e);
+      transition: width 0.35s ease;
+    }
+
+    .hero-card {
+      padding: 22px;
+      background:
+        radial-gradient(circle at top right, rgba(96,165,250,0.14), transparent 28%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.96));
+      border: 1px solid rgba(96,165,250,0.22);
+    }
+
+    .hero-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hero-title-wrap h2 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .hero-title-wrap p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 68ch;
+      line-height: 1.55;
+    }
+
+    .hero-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .hero-output {
+      border: 1px solid var(--border);
+      background: rgba(2, 6, 23, 0.45);
+      border-radius: 18px;
+      padding: 18px;
+      min-height: 260px;
+      color: #e2e8f0;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .secondary-btn {
+      background: rgba(30, 41, 59, 0.9);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .metric-tile {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 14px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      color: #f8fafc;
+      font-weight: 800;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .decision-body {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 16px;
+      color: #dbeafe;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .artifact-list,
+    .summary-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .artifact-item,
+    .summary-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.55);
+    }
+
+    .artifact-item-top,
+    .summary-item-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .artifact-name,
+    .summary-name {
+      font-weight: 700;
+      color: #f8fafc;
+      font-size: 14px;
+    }
+
+    .artifact-meta,
+    .summary-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .model-card {
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.58);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .model-card.winner {
+      border-color: rgba(34,197,94,0.35);
+      box-shadow: inset 0 0 0 1px rgba(34,197,94,0.16);
+      background:
+        radial-gradient(circle at top right, rgba(34,197,94,0.08), transparent 25%),
+        rgba(15, 23, 42, 0.72);
+    }
+
+    .model-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .model-name {
+      font-weight: 800;
+      font-size: 15px;
+      color: #f8fafc;
+    }
+
+    .model-provider {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .model-score {
+      font-size: 12px;
+      font-weight: 800;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.9);
+      white-space: nowrap;
+    }
+
+    .model-excerpt {
+      color: #dbeafe;
+      font-size: 13px;
+      line-height: 1.6;
+      max-height: 140px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .model-full {
+      display: none;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      color: #e2e8f0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 340px;
+      overflow: auto;
+    }
+
+    .model-full.open {
+      display: block;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      border: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.75);
+      color: var(--subtle);
+      padding: 8px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tab-btn.active {
+      background: rgba(96,165,250,0.18);
+      border-color: rgba(96,165,250,0.32);
+      color: #bfdbfe;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .logs-box,
+    .raw-box {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(2, 6, 23, 0.48);
+      min-height: 280px;
+      max-height: 620px;
+      overflow: auto;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #d1fae5;
+      white-space: pre-wrap;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 6px 0;
+    }
+
+    .muted-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1280px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .decision-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .form-grid,
+      .comparison-grid,
+      .decision-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-header,
+      .actions-row,
+      .artifact-item-top,
+      .summary-item-top,
+      .model-top {
+        flex-direction: column;
+        align-items: start;
+      }
+
+      .app-shell {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <section class="topbar">
+      <div class="brand-card">
+        <div>
+          <div class="brand-eyebrow">Autonomous Workflow System</div>
+          <div class="brand-title">Live orchestration dashboard</div>
+          <div class="brand-subtitle">
+            Run a multi-model workflow, monitor each execution stage, compare model outputs, inspect judge decisions, and open generated deliverables from a single control surface.
+          </div>
+        </div>
+        <div class="health-row">
+          <div id="topStatusPill" class="pill info">Idle</div>
+          <div id="topStagePill" class="pill">Stage: —</div>
+          <div id="topProgressPill" class="pill">Progress: 0%</div>
+        </div>
+      </div>
+
+      <div class="run-card">
+        <div>
+          <h3 class="section-title">Run a workflow</h3>
+          <div class="section-subtitle">
+            Submit a prompt, keep the existing async polling flow, and monitor the execution as it moves through optimization, provider runs, judging, and artifact generation.
+          </div>
+        </div>
+
+        <div>
+          <textarea id="promptInput" placeholder="Describe the task you want the workflow to solve..."></textarea>
+        </div>
+
+        <div class="form-grid">
+          <input id="modelAInput" type="text" placeholder="Model A label (optional)" />
+          <input id="modelBInput" type="text" placeholder="Model B label (optional)" />
+          <select id="optimizerToggle">
+            <option value="default">Optimizer: Default</option>
+            <option value="off">Optimizer: Off</option>
+          </select>
+          <select id="artifactToggle">
+            <option value="on">Artifacts: On</option>
+            <option value="off">Artifacts: Off</option>
+          </select>
+        </div>
+
+        <div class="actions-row">
+          <button id="runBtn" class="primary-btn">Start Workflow</button>
+          <div class="job-inline-status">
+            <span>Active Job:</span>
+            <span id="jobIdLabel" class="pill">—</span>
+            <span id="lastUpdateLabel" class="pill">Updated: —</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard-grid">
+      <aside class="left-rail">
+        <div class="tracker-card">
+          <h3 class="section-title">Workflow tracker</h3>
+          <div class="section-subtitle">Live execution stages sourced from the current job state.</div>
+
+          <div class="progress-wrap">
+            <div class="progress-bar">
+              <div id="progressFill" class="progress-fill"></div>
+            </div>
+          </div>
+
+          <div id="trackerList" class="tracker-list">
+            <div class="empty-state">Start a run to populate workflow stages.</div>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <h3 class="section-title">Run summary</h3>
+          <div id="summaryList" class="summary-list">
+            <div class="empty-state">No execution summary yet.</div>
+          </div>
+        </div>
+
+        <div class="artifact-card">
+          <h3 class="section-title">Deliverables</h3>
+          <div class="section-subtitle">Generated artifacts and output files from the current run.</div>
+          <div id="artifactList" class="artifact-list">
+            <div class="empty-state">Artifacts will appear here when generation completes.</div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="center-stage">
+        <div class="hero-card">
+          <div class="hero-header">
+            <div class="hero-title-wrap">
+              <h2>Winning output</h2>
+              <p>
+                The selected result becomes the focal point here, with provider identity, judge rationale, and quick access to the deliverable path.
+              </p>
+            </div>
+            <div id="heroBadges" class="hero-badges">
+              <span class="pill">Winner: —</span>
+              <span class="pill">Score: —</span>
+            </div>
+          </div>
+
+          <div id="heroOutput" class="hero-output">No winning output available yet.</div>
+
+          <div class="hero-actions">
+            <button id="copyWinnerBtn" class="secondary-btn" type="button">Copy winning output</button>
+            <a id="openWinnerArtifactBtn" class="secondary-btn hidden" target="_blank" rel="noopener noreferrer">Open artifact</a>
+          </div>
+        </div>
+
+        <div class="decision-card">
+          <h3 class="section-title">Decision center</h3>
+          <div class="section-subtitle">
+            Judge recommendation, execution metadata, and outcome context for the active run.
+          </div>
+
+          <div class="decision-grid">
+            <div class="metric-tile">
+              <div class="metric-label">Workflow status</div>
+              <div id="metricStatus" class="metric-value">Idle</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Current stage</div>
+              <div id="metricStage" class="metric-value">—</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Selected provider</div>
+              <div id="metricWinner" class="metric-value">—</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Total duration</div>
+              <div id="metricDuration" class="metric-value">—</div>
+            </div>
+          </div>
+
+          <div id="decisionBody" class="decision-body">Judge reasoning and decision notes will appear here.</div>
+        </div>
+
+        <div class="comparison-card">
+          <h3 class="section-title">Model comparison</h3>
+          <div class="section-subtitle">
+            Compare provider outputs side by side and inspect the winning response in context.
+          </div>
+
+          <div id="comparisonGrid" class="comparison-grid">
+            <div class="empty-state">Comparison cards will populate once provider outputs are available.</div>
+          </div>
+        </div>
+      </main>
+
+      <aside class="right-rail">
+        <div class="log-card">
+          <h3 class="section-title">Live telemetry</h3>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="logsPanel" type="button">Logs</button>
+            <button class="tab-btn" data-tab="rawPanel" type="button">Raw payload</button>
+          </div>
+
+          <div id="logsPanel" class="tab-panel active">
+            <div id="logsBox" class="logs-box">No logs yet.</div>
+          </div>
+
+          <div id="rawPanel" class="tab-panel">
+            <div id="rawBox" class="raw-box">No payload yet.</div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      jobId: null,
+      pollHandle: null,
+      lastPayload: null,
+      lastLogCount: 0,
+      autoScrollLogs: true
+    };
+
+    const els = {
+      promptInput: document.getElementById('promptInput'),
+      modelAInput: document.getElementById('modelAInput'),
+      modelBInput: document.getElementById('modelBInput'),
+      optimizerToggle: document.getElementById('optimizerToggle'),
+      artifactToggle: document.getElementById('artifactToggle'),
+      runBtn: document.getElementById('runBtn'),
+      jobIdLabel: document.getElementById('jobIdLabel'),
+      lastUpdateLabel: document.getElementById('lastUpdateLabel'),
+
+      topStatusPill: document.getElementById('topStatusPill'),
+      topStagePill: document.getElementById('topStagePill'),
+      topProgressPill: document.getElementById('topProgressPill'),
+      progressFill: document.getElementById('progressFill'),
+
+      trackerList: document.getElementById('trackerList'),
+      summaryList: document.getElementById('summaryList'),
+      artifactList: document.getElementById('artifactList'),
+
+      heroBadges: document.getElementById('heroBadges'),
+      heroOutput: document.getElementById('heroOutput'),
+      copyWinnerBtn: document.getElementById('copyWinnerBtn'),
+      openWinnerArtifactBtn: document.getElementById('openWinnerArtifactBtn'),
+
+      metricStatus: document.getElementById('metricStatus'),
+      metricStage: document.getElementById('metricStage'),
+      metricWinner: document.getElementById('metricWinner'),
+      metricDuration: document.getElementById('metricDuration'),
+      decisionBody: document.getElementById('decisionBody'),
+
+      comparisonGrid: document.getElementById('comparisonGrid'),
+      logsBox: document.getElementById('logsBox'),
+      rawBox: document.getElementById('rawBox')
+    };
+
+    function safeText(value, fallback = '—') {
+      if (value === null || value === undefined || value === '') return fallback;
+      if (typeof value === 'object') return JSON.stringify(value, null, 2);
+      return String(value);
+    }
+
+    function escapeHtml(str) {
+      return safeText(str, '').replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[m]));
+    }
+
+    function titleCase(value) {
+      return safeText(value, '—')
+        .replace(/[_-]/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function statusClass(status) {
+      const s = (status || '').toLowerCase();
+      if (['completed', 'complete', 'success', 'succeeded'].includes(s)) return 'success';
+      if (['failed', 'error'].includes(s)) return 'danger';
+      if (['running', 'in_progress', 'active'].includes(s)) return 'info';
+      if (['queued', 'pending'].includes(s)) return 'warning';
+      return '';
+    }
+
+    function formatDuration(payload) {
+      const timing = payload?.timing || {};
+      const value = timing.total_seconds ?? timing.duration_seconds ?? payload?.duration_seconds ?? null;
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+      const seconds = Number(value);
+      if (seconds < 60) return `${seconds.toFixed(1)}s`;
+      const mins = Math.floor(seconds / 60);
+      const rem = (seconds % 60).toFixed(0);
+      return `${mins}m ${rem}s`;
+    }
+
+    function formatJudgeReasoning(payload) {
+      const summary = payload?.summary || {};
+      const outputs = payload?.outputs || {};
+      const judge = outputs?.judge || summary?.judge || payload?.judge || {};
+      if (typeof judge === 'string') return judge;
+
+      const parts = [];
+      if (judge?.winner) parts.push(`Winner: ${judge.winner}`);
+      if (judge?.score !== undefined) parts.push(`Score: ${judge.score}`);
+      if (judge?.reasoning) parts.push(`Reasoning: ${judge.reasoning}`);
+      if (judge?.explanation) parts.push(`Explanation: ${judge.explanation}`);
+      if (judge?.rationale) parts.push(`Rationale: ${judge.rationale}`);
+
+      if (summary?.used_original_prompt === true) {
+        parts.push('Optimizer skipped: original prompt used.');
+      }
+
+      return parts.length ? parts.join('\n\n') : 'Judge reasoning and decision notes will appear here.';
+    }
+
+    function normalizeArtifacts(payload) {
+      const artifacts = payload?.artifacts;
+      if (!artifacts) return [];
+      if (Array.isArray(artifacts)) return artifacts;
+      if (typeof artifacts === 'object') {
+        return Object.entries(artifacts).map(([key, value]) => {
+          if (typeof value === 'string') return { name: key, url: value };
+          return { name: key, ...value };
+        });
+      }
+      return [];
+    }
+
+    function normalizeOutputs(payload) {
+      const outputs = payload?.outputs || {};
+      if (Array.isArray(outputs?.models)) return outputs.models;
+      if (Array.isArray(outputs?.candidates)) return outputs.candidates;
+
+      const result = [];
+      Object.entries(outputs).forEach(([key, value]) => {
+        if (!value || typeof value !== 'object') return;
+        if (['judge', 'summary', 'winner', 'artifacts'].includes(key)) return;
+
+        if ('output' in value || 'text' in value || 'content' in value || 'response' in value) {
+          result.push({
+            id: key,
+            provider: value.provider || key,
+            model: value.model || value.name || key,
+            score: value.score,
+            output: value.output ?? value.text ?? value.content ?? value.response ?? '',
+            raw: value
+          });
+        }
+      });
+      return result;
+    }
+
+    function findWinner(payload, modelOutputs) {
+      const summary = payload?.summary || {};
+      const outputs = payload?.outputs || {};
+      const judge = outputs?.judge || summary?.judge || payload?.judge || {};
+
+      const winnerKey =
+        judge?.winner_key ||
+        judge?.winner ||
+        summary?.winner ||
+        outputs?.winner ||
+        null;
+
+      if (!winnerKey) return modelOutputs[0] || null;
+
+      const normalized = String(winnerKey).toLowerCase();
+      return (
+        modelOutputs.find(item =>
+          String(item.id || '').toLowerCase() === normalized ||
+          String(item.provider || '').toLowerCase() === normalized ||
+          String(item.model || '').toLowerCase() === normalized
+        ) || modelOutputs[0] || null
+      );
+    }
+
+    function renderTopStatus(payload) {
+      const status = safeText(payload?.status, 'idle').toLowerCase();
+      const stage = safeText(payload?.stage);
+      const progress = Number(payload?.progress || 0);
+
+      els.topStatusPill.className = `pill ${statusClass(status)}`;
+      els.topStatusPill.textContent = titleCase(status);
+
+      els.topStagePill.textContent = `Stage: ${titleCase(stage)}`;
+      els.topProgressPill.textContent = `Progress: ${Math.max(0, Math.min(100, progress))}%`;
+      els.progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+
+      els.metricStatus.textContent = titleCase(status);
+      els.metricStage.textContent = titleCase(stage);
+    }
+
+    function renderTracker(payload) {
+      const steps = Array.isArray(payload?.steps) ? payload.steps : [];
+      if (!steps.length) {
+        els.trackerList.innerHTML = '<div class="empty-state">Start a run to populate workflow stages.</div>';
+        return;
+      }
+
+      els.trackerList.innerHTML = steps.map(step => {
+        const stepStatus = String(step.status || 'pending').toLowerCase();
+        const classes = [
+          'tracker-step',
+          ['running', 'active', 'in_progress'].includes(stepStatus) ? 'active' : '',
+          ['completed', 'success', 'done'].includes(stepStatus) ? 'complete' : '',
+          ['failed', 'error'].includes(stepStatus) ? 'failed' : ''
+        ].join(' ').trim();
+
+        const detail = step.message || step.detail || step.description || '';
+        const metaBits = [];
+        if (step.started_at) metaBits.push(`Started: ${step.started_at}`);
+        if (step.completed_at) metaBits.push(`Completed: ${step.completed_at}`);
+        if (step.duration_seconds !== undefined) metaBits.push(`Duration: ${step.duration_seconds}s`);
+
+        return `
+          <div class="${classes}">
+            <div class="tracker-topline">
+              <div class="tracker-name">${escapeHtml(titleCase(step.name || step.stage || 'Step'))}</div>
+              <div class="pill ${statusClass(stepStatus)}">${escapeHtml(titleCase(stepStatus))}</div>
+            </div>
+            <div class="tracker-meta">${escapeHtml(detail || 'Awaiting execution details.')}</div>
+            ${metaBits.length ? `<div class="tracker-meta" style="margin-top:8px;">${escapeHtml(metaBits.join(' • '))}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSummary(payload, winner) {
+      const summary = payload?.summary || {};
+      const items = [
+        { label: 'Job ID', value: state.jobId || '—' },
+        { label: 'Winner', value: winner?.provider || winner?.model || summary?.winner || '—' },
+        { label: 'Progress', value: `${payload?.progress ?? 0}%` },
+        { label: 'Stage', value: titleCase(payload?.stage || '—') },
+        { label: 'Optimizer Mode', value: summary?.used_original_prompt ? 'Original prompt used' : 'Optimized / default path' },
+        { label: 'Generated At', value: payload?.updated_at || payload?.completed_at || '—' }
+      ];
+
+      els.summaryList.innerHTML = items.map(item => `
+        <div class="summary-item">
+          <div class="summary-item-top">
+            <div class="summary-name">${escapeHtml(item.label)}</div>
+          </div>
+          <div class="summary-meta">${escapeHtml(safeText(item.value))}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderArtifacts(payload) {
+      const artifacts = normalizeArtifacts(payload);
+      if (!artifacts.length) {
+        els.artifactList.innerHTML = '<div class="empty-state">Artifacts will appear here when generation completes.</div>';
+        els.openWinnerArtifactBtn.classList.add('hidden');
+        els.openWinnerArtifactBtn.removeAttribute('href');
+        return;
+      }
+
+      els.artifactList.innerHTML = artifacts.map((artifact, idx) => {
+        const url = artifact.url || artifact.href || artifact.path || artifact.file || '#';
+        const name = artifact.name || artifact.label || `Artifact ${idx + 1}`;
+        const meta = artifact.type || artifact.kind || artifact.description || 'Generated deliverable';
+        return `
+          <div class="artifact-item">
+            <div class="artifact-item-top">
+              <div class="artifact-name">${escapeHtml(name)}</div>
+              <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="pill info">Open</a>
+            </div>
+            <div class="artifact-meta">${escapeHtml(meta)}</div>
+          </div>
+        `;
+      }).join('');
+
+      const primary = artifacts[0];
+      const primaryUrl = primary?.url || primary?.href || primary?.path || primary?.file;
+      if (primaryUrl) {
+        els.openWinnerArtifactBtn.href = primaryUrl;
+        els.openWinnerArtifactBtn.classList.remove('hidden');
+      }
+    }
+
+    function renderHero(payload, winner) {
+      const summary = payload?.summary || {};
+      const outputs = payload?.outputs || {};
+      const judge = outputs?.judge || summary?.judge || payload?.judge || {};
+      const winnerText = winner?.output || winner?.raw?.output || winner?.raw?.text || 'No winning output available yet.';
+      const winnerLabel = winner?.provider || winner?.model || judge?.winner || summary?.winner || '—';
+      const scoreLabel = winner?.score ?? judge?.score ?? '—';
+
+      els.heroBadges.innerHTML = `
+        <span class="pill success">Winner: ${escapeHtml(safeText(winnerLabel))}</span>
+        <span class="pill info">Score: ${escapeHtml(safeText(scoreLabel))}</span>
+      `;
+
+      els.heroOutput.textContent = winnerText || 'No winning output available yet.';
+      els.metricWinner.textContent = safeText(winnerLabel);
+      els.metricDuration.textContent = formatDuration(payload);
+    }
+
+    function renderDecision(payload) {
+      els.decisionBody.textContent = formatJudgeReasoning(payload);
+    }
+
+    function renderComparison(payload, winner) {
+      const outputs = normalizeOutputs(payload);
+      if (!outputs.length) {
+        els.comparisonGrid.innerHTML = '<div class="empty-state">Comparison cards will populate once provider outputs are available.</div>';
+        return;
+      }
+
+      els.comparisonGrid.innerHTML = outputs.map((item, index) => {
+        const isWinner = winner && (
+          item.id === winner.id ||
+          item.provider === winner.provider ||
+          item.model === winner.model
+        );
+
+        const excerpt = safeText(item.output || '', '').slice(0, 420) || 'No output available.';
+        const fullId = `model-full-${index}`;
+
+        return `
+          <div class="model-card ${isWinner ? 'winner' : ''}">
+            <div class="model-top">
+              <div>
+                <div class="model-name">${escapeHtml(safeText(item.model || item.provider || 'Model output'))}</div>
+                <div class="model-provider">${escapeHtml(safeText(item.provider || item.id || 'Provider'))}</div>
+              </div>
+              <div class="model-score">${escapeHtml(item.score !== undefined ? `Score: ${item.score}` : (isWinner ? 'Selected winner' : 'Candidate'))}</div>
+            </div>
+
+            <div class="model-excerpt">${escapeHtml(excerpt)}</div>
+
+            <div>
+              <button class="secondary-btn" type="button" onclick="toggleModelFull('${fullId}')">
+                ${isWinner ? 'Inspect winning output' : 'Expand full output'}
+              </button>
+            </div>
+
+            <div id="${fullId}" class="model-full">${escapeHtml(safeText(item.output || 'No full output available.'))}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderLogs(payload) {
+      const logs = Array.isArray(payload?.logs) ? payload.logs : [];
+      if (!logs.length) {
+        els.logsBox.textContent = 'No logs yet.';
+        return;
+      }
+
+      const wasNearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
+      els.logsBox.textContent = logs.map(line => typeof line === 'string' ? line : JSON.stringify(line)).join('\n');
+
+      if (state.autoScrollLogs && wasNearBottom) {
+        els.logsBox.scrollTop = els.logsBox.scrollHeight;
+      }
+    }
+
+    function renderRaw(payload) {
+      els.rawBox.textContent = JSON.stringify(payload, null, 2);
+    }
+
+    function renderPayload(payload) {
+      state.lastPayload = payload;
+
+      renderTopStatus(payload);
+      renderTracker(payload);
+
+      const modelOutputs = normalizeOutputs(payload);
+      const winner = findWinner(payload, modelOutputs);
+
+      renderSummary(payload, winner);
+      renderArtifacts(payload);
+      renderHero(payload, winner);
+      renderDecision(payload);
+      renderComparison(payload, winner);
+      renderLogs(payload);
+      renderRaw(payload);
+
+      els.lastUpdateLabel.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+
+      const status = String(payload?.status || '').toLowerCase();
+      if (['completed', 'failed', 'error'].includes(status)) {
+        stopPolling();
+        els.runBtn.disabled = false;
+        els.runBtn.textContent = status === 'completed' ? 'Run Another Workflow' : 'Retry Workflow';
+      }
+    }
+
+    async function startRun() {
+      const prompt = els.promptInput.value.trim();
+      if (!prompt) {
+        alert('Please enter a prompt before starting the workflow.');
+        return;
+      }
+
+      els.runBtn.disabled = true;
+      els.runBtn.textContent = 'Starting...';
+
+      const requestBody = {
+        prompt,
+        options: {
+          model_a_label: els.modelAInput.value.trim() || undefined,
+          model_b_label: els.modelBInput.value.trim() || undefined,
+          force_optimizer_off: els.optimizerToggle.value === 'off',
+          generate_artifacts: els.artifactToggle.value !== 'off'
+        }
+      };
+
+      try {
+        const response = await fetch('/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || `Run request failed with ${response.status}`);
+        }
+
+        const result = await response.json();
+        const jobId = result.job_id || result.id;
+        if (!jobId) throw new Error('No job_id returned from /run');
+
+        state.jobId = jobId;
+        els.jobIdLabel.textContent = jobId;
+        els.runBtn.textContent = 'Running...';
+
+        stopPolling();
+        pollStatus();
+        state.pollHandle = setInterval(pollStatus, 2000);
+      } catch (error) {
+        els.runBtn.disabled = false;
+        els.runBtn.textContent = 'Start Workflow';
+        alert(`Failed to start workflow: ${error.message}`);
+      }
+    }
+
+    async function pollStatus() {
+      if (!state.jobId) return;
+
+      try {
+        const response = await fetch(`/status/${encodeURIComponent(state.jobId)}`);
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || `Status request failed with ${response.status}`);
+        }
+
+        const payload = await response.json();
+        renderPayload(payload);
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }
+
+    function stopPolling() {
+      if (state.pollHandle) {
+        clearInterval(state.pollHandle);
+        state.pollHandle = null;
+      }
+    }
+
+    function toggleModelFull(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('open');
+    }
+    window.toggleModelFull = toggleModelFull;
+
+    els.runBtn.addEventListener('click', startRun);
+
+    els.copyWinnerBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(els.heroOutput.textContent || '');
+        els.copyWinnerBtn.textContent = 'Copied';
+        setTimeout(() => { els.copyWinnerBtn.textContent = 'Copy winning output'; }, 1200);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(tab).classList.add('active');
+      });
+    });
+
+    els.logsBox.addEventListener('scroll', () => {
+      const nearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
+      state.autoScrollLogs = nearBottom;
+    });
+  </script>
+</body>
+</html>
