@@ -834,530 +834,556 @@
   </div>
 
   <script>
-    const state = {
-      jobId: null,
-      pollHandle: null,
-      lastPayload: null,
-      autoScrollLogs: true
-    };
+  const state = {
+    jobId: null,
+    pollHandle: null,
+    lastPayload: null,
+    autoScrollLogs: true
+  };
 
-    const els = {
-      promptInput: document.getElementById('promptInput'),
-      optimizerToggle: document.getElementById('optimizerToggle'),
-      artifactToggle: document.getElementById('artifactToggle'),
-      runBtn: document.getElementById('runBtn'),
-      jobIdLabel: document.getElementById('jobIdLabel'),
-      lastUpdateLabel: document.getElementById('lastUpdateLabel'),
+  const els = {
+    promptInput: document.getElementById('promptInput'),
+    optimizerToggle: document.getElementById('optimizerToggle'),
+    artifactToggle: document.getElementById('artifactToggle'),
+    runBtn: document.getElementById('runBtn'),
+    jobIdLabel: document.getElementById('jobIdLabel'),
+    lastUpdateLabel: document.getElementById('lastUpdateLabel'),
 
-      topStatusPill: document.getElementById('topStatusPill'),
-      topStagePill: document.getElementById('topStagePill'),
-      topProgressPill: document.getElementById('topProgressPill'),
-      progressFill: document.getElementById('progressFill'),
+    topStatusPill: document.getElementById('topStatusPill'),
+    topStagePill: document.getElementById('topStagePill'),
+    topProgressPill: document.getElementById('topProgressPill'),
+    progressFill: document.getElementById('progressFill'),
 
-      trackerList: document.getElementById('trackerList'),
-      summaryList: document.getElementById('summaryList'),
-      artifactList: document.getElementById('artifactList'),
+    trackerList: document.getElementById('trackerList'),
+    summaryList: document.getElementById('summaryList'),
+    artifactList: document.getElementById('artifactList'),
 
-      heroBadges: document.getElementById('heroBadges'),
-      heroOutput: document.getElementById('heroOutput'),
-      copyWinnerBtn: document.getElementById('copyWinnerBtn'),
-      openWinnerArtifactBtn: document.getElementById('openWinnerArtifactBtn'),
+    heroBadges: document.getElementById('heroBadges'),
+    heroOutput: document.getElementById('heroOutput'),
+    copyWinnerBtn: document.getElementById('copyWinnerBtn'),
+    openWinnerArtifactBtn: document.getElementById('openWinnerArtifactBtn'),
 
-      metricStatus: document.getElementById('metricStatus'),
-      metricStage: document.getElementById('metricStage'),
-      metricWinner: document.getElementById('metricWinner'),
-      metricDuration: document.getElementById('metricDuration'),
-      decisionBody: document.getElementById('decisionBody'),
+    metricStatus: document.getElementById('metricStatus'),
+    metricStage: document.getElementById('metricStage'),
+    metricWinner: document.getElementById('metricWinner'),
+    metricDuration: document.getElementById('metricDuration'),
+    decisionBody: document.getElementById('decisionBody'),
 
-      comparisonGrid: document.getElementById('comparisonGrid'),
-      logsBox: document.getElementById('logsBox'),
-      rawBox: document.getElementById('rawBox')
-    };
+    comparisonGrid: document.getElementById('comparisonGrid'),
+    logsBox: document.getElementById('logsBox'),
+    rawBox: document.getElementById('rawBox')
+  };
 
-    function safeText(value, fallback = '—') {
-      if (value === null || value === undefined || value === '') return fallback;
-      if (typeof value === 'object') return JSON.stringify(value, null, 2);
-      return String(value);
+  function safeText(value, fallback = '—') {
+    if (value === null || value === undefined || value === '') return fallback;
+    if (typeof value === 'object') return JSON.stringify(value, null, 2);
+    return String(value);
+  }
+
+  function escapeHtml(str) {
+    return safeText(str, '').replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[m]));
+  }
+
+  function titleCase(value) {
+    return safeText(value, '—')
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function statusClass(status) {
+    const s = (status || '').toLowerCase();
+    if (['completed', 'complete', 'success', 'succeeded'].includes(s)) return 'success';
+    if (['failed', 'error'].includes(s)) return 'danger';
+    if (['running', 'in_progress', 'active'].includes(s)) return 'info';
+    if (['queued', 'pending', 'skipped'].includes(s)) return 'warning';
+    return '';
+  }
+
+  function getWinner(payload) {
+    return payload?.summary?.winner || payload?.outputs?.judge_output?.winner || '—';
+  }
+
+  function getJudge(payload) {
+    return payload?.outputs?.judge_output || payload?.summary || {};
+  }
+
+  function getFinalOutput(payload) {
+    return (
+      payload?.outputs?.final_output ||
+      payload?.outputs?.claude_output ||
+      payload?.outputs?.openai_output ||
+      'No winning output available yet.'
+    );
+  }
+
+  function getWinningScoreLabel(payload) {
+    const winner = String(getWinner(payload) || '').toLowerCase();
+    const judge = getJudge(payload);
+
+    if (winner === 'claude' && judge?.claude_scores?.overall_strength !== undefined) {
+      return String(judge.claude_scores.overall_strength);
     }
 
-    function escapeHtml(str) {
-      return safeText(str, '').replace(/[&<>"']/g, (m) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      }[m]));
+    if (winner === 'openai' && judge?.openai_scores?.overall_strength !== undefined) {
+      return String(judge.openai_scores.overall_strength);
     }
 
-    function titleCase(value) {
-      return safeText(value, '—')
-        .replace(/[_-]/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
+    if (judge?.confidence) {
+      return titleCase(judge.confidence);
     }
 
-    function statusClass(status) {
-      const s = (status || '').toLowerCase();
-      if (['completed', 'complete', 'success', 'succeeded'].includes(s)) return 'success';
-      if (['failed', 'error'].includes(s)) return 'danger';
-      if (['running', 'in_progress', 'active'].includes(s)) return 'info';
-      if (['queued', 'pending'].includes(s)) return 'warning';
-      return '';
+    return '—';
+  }
+
+  function getNumericProgress(payload) {
+    const p = payload?.progress;
+
+    if (typeof p === 'number') return p;
+    if (typeof p === 'string' && !isNaN(Number(p))) return Number(p);
+
+    if (p && typeof p === 'object') {
+      if (typeof p.percent === 'number') return p.percent;
+      if (typeof p.value === 'number') return p.value;
+      if (typeof p.progress === 'number') return p.progress;
     }
 
-    function getLatestRecord(payload) {
-      if (Array.isArray(payload?.records) && payload.records.length > 0) {
-        return payload.records[payload.records.length - 1];
+    return 0;
+  }
+
+  function getDurationLabel(payload) {
+    const timing = payload?.timing || {};
+
+    if (typeof timing.total_runtime_seconds === 'number') {
+      return `${timing.total_runtime_seconds.toFixed(2)}s`;
+    }
+
+    if (typeof timing.total_seconds === 'number') {
+      return `${timing.total_seconds.toFixed(2)}s`;
+    }
+
+    if (typeof timing.duration_seconds === 'number') {
+      return `${timing.duration_seconds.toFixed(2)}s`;
+    }
+
+    if (typeof payload?.duration_seconds === 'number') {
+      return `${payload.duration_seconds.toFixed(2)}s`;
+    }
+
+    return '—';
+  }
+
+  function getOptimizerModeLabel(payload) {
+    const optimizerStep = payload?.steps?.optimizer;
+    const requestOptions = payload?.request?.options || {};
+
+    if (
+      optimizerStep?.status === 'skipped' ||
+      optimizerStep?.meta?.used_original_prompt === true ||
+      requestOptions.force_optimizer_off === true ||
+      requestOptions.optimize_prompt === false ||
+      requestOptions.optimizer_enabled === false ||
+      requestOptions.enable_optimizer === false
+    ) {
+      return 'Disabled / original prompt';
+    }
+
+    return 'Optimized / default path';
+  }
+
+  function getModelComparisonItems(payload) {
+    const judge = getJudge(payload);
+
+    return [
+      {
+        id: 'openai',
+        provider: payload?.steps?.openai?.provider || 'OpenAI',
+        model: payload?.steps?.openai?.model || 'OpenAI',
+        output: payload?.outputs?.openai_output || '',
+        scores: judge?.openai_scores || null
+      },
+      {
+        id: 'claude',
+        provider: payload?.steps?.claude?.provider || 'Claude',
+        model: payload?.steps?.claude?.model || 'Claude',
+        output: payload?.outputs?.claude_output || '',
+        scores: judge?.claude_scores || null
       }
-      return null;
-    }
+    ].filter(item => item.output);
+  }
 
-    function buildPresentationState(payload) {
-      const record = getLatestRecord(payload);
+  function formatScoreSummary(scores) {
+    if (!scores || typeof scores !== 'object') return 'No detailed score breakdown.';
+    return Object.entries(scores)
+      .map(([key, value]) => `${titleCase(key)}: ${value}`)
+      .join(' • ');
+  }
 
-      return {
-        record,
-        openai: record?.openai_result || null,
-        claude: record?.claude_result || null,
-        judge: record?.judge_decision || payload?.outputs?.judge || payload?.summary?.judge || payload?.judge || null,
-        optimization: record?.prompt_optimization || null
-      };
-    }
+  function normalizeArtifacts(payload) {
+    const artifacts = payload?.artifacts;
+    if (!artifacts) return [];
 
-    function getWinningProvider(presentation) {
-      return presentation?.judge?.winner || null;
-    }
+    if (Array.isArray(artifacts)) return artifacts;
 
-    function getWinningResult(presentation) {
-      const winner = String(getWinningProvider(presentation) || '').toLowerCase();
-      if (winner === 'claude') return presentation?.claude || null;
-      if (winner === 'openai') return presentation?.openai || null;
-      return null;
-    }
+    if (typeof artifacts === 'object') {
+      return Object.entries(artifacts).map(([key, value]) => {
+        const normalizedValue =
+          typeof value === 'string' && !value.startsWith('http') && !value.startsWith('/')
+            ? `/${value}`
+            : value;
 
-    function getWinnerScoreLabel(presentation) {
-      const winner = String(getWinningProvider(presentation) || '').toLowerCase();
-      const judge = presentation?.judge || {};
-
-      if (winner === 'claude' && judge?.claude_scores?.overall_strength !== undefined) {
-        return String(judge.claude_scores.overall_strength);
-      }
-
-      if (winner === 'openai' && judge?.openai_scores?.overall_strength !== undefined) {
-        return String(judge.openai_scores.overall_strength);
-      }
-
-      if (judge?.confidence) {
-        return titleCase(judge.confidence);
-      }
-
-      return '—';
-    }
-
-    function getNumericProgress(payload) {
-      const p = payload?.progress;
-
-      if (typeof p === 'number') return p;
-      if (typeof p === 'string' && !isNaN(Number(p))) return Number(p);
-
-      if (p && typeof p === 'object') {
-        if (typeof p.percent === 'number') return p.percent;
-        if (typeof p.value === 'number') return p.value;
-        if (typeof p.progress === 'number') return p.progress;
-      }
-
-      return 0;
-    }
-
-    function getDurationLabel(payload) {
-      const timing = payload?.timing || {};
-
-      if (typeof timing.total_seconds === 'number') {
-        return `${timing.total_seconds.toFixed(1)}s`;
-      }
-
-      if (typeof timing.duration_seconds === 'number') {
-        return `${timing.duration_seconds.toFixed(1)}s`;
-      }
-
-      if (typeof payload?.duration_seconds === 'number') {
-        return `${payload.duration_seconds.toFixed(1)}s`;
-      }
-
-      return '—';
-    }
-
-    function formatScoreSummary(scores) {
-      if (!scores || typeof scores !== 'object') return 'No detailed score breakdown.';
-      return Object.entries(scores)
-        .map(([key, value]) => `${titleCase(key)}: ${value}`)
-        .join(' • ');
-    }
-
-    function normalizeArtifacts(payload) {
-      const artifacts = payload?.artifacts;
-      if (!artifacts) return [];
-  
-      if (Array.isArray(artifacts)) return artifacts;
-  
-      if (typeof artifacts === 'object') {
-        return Object.entries(artifacts).map(([key, value]) => {
-          const normalizedValue =
-            typeof value === 'string' && !value.startsWith('http') && !value.startsWith('/')
-              ? `/${value}`
-              : value;
-  
-          return { name: key, url: normalizedValue };
-        });
-      }
-  
-      return [];
-    }
-    
-    function renderTopStatus(payload) {
-      const status = safeText(payload?.status, 'idle').toLowerCase();
-      const stage = safeText(payload?.stage);
-      const progress = getNumericProgress(payload);
-
-      els.topStatusPill.className = `pill ${statusClass(status)}`;
-      els.topStatusPill.textContent = titleCase(status);
-
-      els.topStagePill.textContent = `Stage: ${titleCase(stage)}`;
-      els.topProgressPill.textContent = `Progress: ${Math.max(0, Math.min(100, progress))}%`;
-      els.progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
-
-      els.metricStatus.textContent = titleCase(status);
-      els.metricStage.textContent = titleCase(stage);
-    }
-
-    function renderTracker(payload) {
-      const stepsObj = payload?.steps || {};
-      const entries = Object.entries(stepsObj);
-  
-      if (!entries.length) {
-        els.trackerList.innerHTML = '<div class="empty-state">Start a run to populate workflow stages.</div>';
-        return;
-      }
-  
-      els.trackerList.innerHTML = entries.map(([key, step]) => {
-        const stepStatus = String(step?.status || 'pending').toLowerCase();
-        const classes = [
-          'tracker-step',
-          ['running', 'active', 'in_progress'].includes(stepStatus) ? 'active' : '',
-          ['completed', 'success', 'done'].includes(stepStatus) ? 'complete' : '',
-          ['failed', 'error'].includes(stepStatus) ? 'failed' : ''
-        ].join(' ').trim();
-  
-        const detail = step?.message || 'Awaiting execution details.';
-        const metaBits = [];
-        if (step?.provider) metaBits.push(`Provider: ${step.provider}`);
-        if (step?.model) metaBits.push(`Model: ${step.model}`);
-        if (step?.latency_seconds !== undefined && step?.latency_seconds !== null) {
-          metaBits.push(`Duration: ${step.latency_seconds}s`);
-        }
-  
-        return `
-          <div class="${classes}">
-            <div class="tracker-topline">
-              <div class="tracker-name">${escapeHtml(titleCase(key))}</div>
-              <div class="pill ${statusClass(stepStatus)}">${escapeHtml(titleCase(stepStatus))}</div>
-            </div>
-            <div class="tracker-meta">${escapeHtml(detail)}</div>
-            ${metaBits.length ? `<div class="tracker-meta" style="margin-top:8px;">${escapeHtml(metaBits.join(' • '))}</div>` : ''}
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderSummary(payload) {
-      const progress = getNumericProgress(payload);
-  
-      const items = [
-        { label: 'Job ID', value: state.jobId || payload?.job_id || '—' },
-        { label: 'Winner', value: getWinner(payload) },
-        { label: 'Progress', value: `${progress}%` },
-        { label: 'Stage', value: titleCase(payload?.stage || '—') },
-        { label: 'Optimizer Mode', value: getOptimizerModeLabel(payload) },
-        { label: 'Generated At', value: payload?.updated_at || payload?.completed_at || '—' }
-      ];
-  
-      els.summaryList.innerHTML = items.map(item => `
-        <div class="summary-item">
-          <div class="summary-item-top">
-            <div class="summary-name">${escapeHtml(item.label)}</div>
-          </div>
-          <div class="summary-meta">${escapeHtml(safeText(item.value))}</div>
-        </div>
-      `).join('');
-    }
-
-    function renderArtifacts(payload) {
-      const artifacts = normalizeArtifacts(payload);
-      if (!artifacts.length) {
-        els.artifactList.innerHTML = '<div class="empty-state">Artifacts will appear here when generation completes.</div>';
-        els.openWinnerArtifactBtn.classList.add('hidden');
-        els.openWinnerArtifactBtn.removeAttribute('href');
-        return;
-      }
-
-      els.artifactList.innerHTML = artifacts.map((artifact, idx) => {
-        const url = artifact.url || artifact.href || artifact.path || artifact.file || '#';
-        const name = artifact.name || artifact.label || `Artifact ${idx + 1}`;
-
-        let meta = artifact.type || artifact.kind || artifact.description || 'Generated deliverable';
-        if (typeof url === 'string' && url.endsWith('.html')) meta = 'Presentation-ready report';
-        if (typeof url === 'string' && url.endsWith('.json')) meta = 'Structured run record';
-
-        return `
-          <div class="artifact-item">
-            <div class="artifact-item-top">
-              <div class="artifact-name">${escapeHtml(name)}</div>
-              <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="pill info">Open</a>
-            </div>
-            <div class="artifact-meta">${escapeHtml(meta)}</div>
-          </div>
-        `;
-      }).join('');
-
-      const primary = artifacts[0];
-      const primaryUrl = primary?.url || primary?.href || primary?.path || primary?.file;
-      if (primaryUrl) {
-        els.openWinnerArtifactBtn.href = primaryUrl;
-        els.openWinnerArtifactBtn.classList.remove('hidden');
-      }
-    }
-
-    function renderHero(payload) {
-      const winnerName = getWinner(payload);
-      const scoreLabel = getWinningScoreLabel(payload);
-      const winnerText = getFinalOutput(payload);
-  
-      els.heroBadges.innerHTML = `
-        <span class="pill success">Winner: ${escapeHtml(safeText(winnerName))}</span>
-        <span class="pill info">Score: ${escapeHtml(safeText(scoreLabel))}</span>
-      `;
-  
-      els.heroOutput.textContent = winnerText;
-      els.metricWinner.textContent = safeText(winnerName);
-      els.metricDuration.textContent = getDurationLabel(payload);
-    }
-
-    function renderDecision(payload) {
-      const judge = getJudge(payload);
-      const parts = [];
-  
-      if (payload?.summary?.label) {
-        parts.push(`Decision summary:\n${payload.summary.label}`);
-      }
-  
-      if (judge?.reason) {
-        parts.push(`Why this won:\n${judge.reason}`);
-      }
-  
-      if (judge?.confidence) {
-        parts.push(`Judge confidence: ${titleCase(judge.confidence)}`);
-      }
-  
-      if (payload?.summary?.next_action) {
-        parts.push(`Decision outcome: ${titleCase(payload.summary.next_action)}`);
-      }
-  
-      els.decisionBody.textContent =
-        parts.join('\n\n') || 'Judge reasoning and decision notes will appear here.';
-    }
-    
-    function renderComparison(payload) {
-      const winner = String(getWinner(payload) || '').toLowerCase();
-      const models = getModelComparisonItems(payload);
-  
-      if (!models.length) {
-        els.comparisonGrid.innerHTML = '<div class="empty-state">Comparison cards will populate once provider outputs are available.</div>';
-        return;
-      }
-  
-      els.comparisonGrid.innerHTML = models.map((item, index) => {
-        const isWinner = item.id === winner;
-        const excerpt = safeText(item.output || '', '').slice(0, 420) || 'No output available.';
-        const scoreSummary = formatScoreSummary(item.scores);
-        const fullId = `model-full-${index}`;
-  
-        return `
-          <div class="model-card ${isWinner ? 'winner' : ''}">
-            <div class="model-top">
-              <div>
-                <div class="model-name">${escapeHtml(safeText(item.model))}</div>
-                <div class="model-provider">${escapeHtml(safeText(item.provider))}</div>
-              </div>
-              <div class="model-score">${escapeHtml(isWinner ? 'Winning response' : 'Candidate')}</div>
-            </div>
-  
-            <div class="muted-note">${escapeHtml(scoreSummary)}</div>
-            <div class="model-excerpt">${escapeHtml(excerpt)}</div>
-  
-            <div>
-              <button class="secondary-btn" type="button" onclick="toggleModelFull('${fullId}')">
-                ${isWinner ? 'Inspect winning output' : 'Expand full output'}
-              </button>
-            </div>
-  
-            <div id="${fullId}" class="model-full">${escapeHtml(safeText(item.output || 'No full output available.'))}</div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderLogs(payload) {
-      const logs = Array.isArray(payload?.logs) ? payload.logs : [];
-      if (!logs.length) {
-        els.logsBox.textContent = 'No logs yet.';
-        return;
-      }
-
-      const wasNearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
-      els.logsBox.textContent = logs.map(line => typeof line === 'string' ? line : JSON.stringify(line)).join('\n');
-
-      if (state.autoScrollLogs && wasNearBottom) {
-        els.logsBox.scrollTop = els.logsBox.scrollHeight;
-      }
-    }
-
-    function renderRaw(payload) {
-      els.rawBox.textContent = JSON.stringify(payload, null, 2);
-    }
-
-    function renderPayload(payload) {
-      state.lastPayload = payload;
-
-      renderTopStatus(payload);
-      renderTracker(payload);
-      renderSummary(payload);
-      renderArtifacts(payload);
-      renderHero(payload);
-      renderDecision(payload);
-      renderComparison(payload);
-      renderLogs(payload);
-      renderRaw(payload);
-
-      els.lastUpdateLabel.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
-
-      const status = String(payload?.status || '').toLowerCase();
-      if (['completed', 'failed', 'error'].includes(status)) {
-        stopPolling();
-        els.runBtn.disabled = false;
-        els.runBtn.textContent = status === 'completed' ? 'Run Another Workflow' : 'Retry Workflow';
-      }
-    }
-
-    async function startRun() {
-      const requestBody = {
-        prompt,
-        options: {
-          force_optimizer_off: true,
-          generate_artifacts: els.artifactToggle.value !== 'off'
-        }
-      };
-
-      els.runBtn.disabled = true;
-      els.runBtn.textContent = 'Starting...';
-
-      const requestBody = {
-        prompt,
-        options: {
-          model_a_label: els.modelAInput.value.trim() || undefined,
-          model_b_label: els.modelBInput.value.trim() || undefined,
-          force_optimizer_off: els.optimizerToggle.value === 'off',
-          generate_artifacts: els.artifactToggle.value !== 'off'
-        }
-      };
-
-      try {
-        const response = await fetch('/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(errText || `Run request failed with ${response.status}`);
-        }
-
-        const result = await response.json();
-        const jobId = result.job_id || result.id;
-        if (!jobId) throw new Error('No job_id returned from /run');
-
-        state.jobId = jobId;
-        els.jobIdLabel.textContent = jobId;
-        els.runBtn.textContent = 'Running...';
-
-        stopPolling();
-        await pollStatus();
-        state.pollHandle = setInterval(pollStatus, 2000);
-      } catch (error) {
-        els.runBtn.disabled = false;
-        els.runBtn.textContent = 'Start Workflow';
-        alert(`Failed to start workflow: ${error.message}`);
-      }
-    }
-
-    async function pollStatus() {
-      if (!state.jobId) return;
-
-      try {
-        const response = await fetch(`/status/${encodeURIComponent(state.jobId)}`);
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(errText || `Status request failed with ${response.status}`);
-        }
-
-        const payload = await response.json();
-        renderPayload(payload);
-      } catch (error) {
-        console.error('Polling error:', error);
-      }
-    }
-
-    function stopPolling() {
-      if (state.pollHandle) {
-        clearInterval(state.pollHandle);
-        state.pollHandle = null;
-      }
-    }
-
-    function toggleModelFull(id) {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle('open');
-    }
-    window.toggleModelFull = toggleModelFull;
-
-    els.runBtn.addEventListener('click', startRun);
-
-    els.copyWinnerBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(els.heroOutput.textContent || '');
-        els.copyWinnerBtn.textContent = 'Copied';
-        setTimeout(() => {
-          els.copyWinnerBtn.textContent = 'Copy winning output';
-        }, 1200);
-      } catch (err) {
-        console.error(err);
-      }
-    });
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
-        document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(tab).classList.add('active');
+        return { name: key, url: normalizedValue };
       });
-    });
+    }
 
-    els.logsBox.addEventListener('scroll', () => {
-      const nearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
-      state.autoScrollLogs = nearBottom;
+    return [];
+  }
+
+  function renderTopStatus(payload) {
+    const status = safeText(payload?.status, 'idle').toLowerCase();
+    const stage = safeText(payload?.stage);
+    const progress = getNumericProgress(payload);
+
+    els.topStatusPill.className = `pill ${statusClass(status)}`;
+    els.topStatusPill.textContent = titleCase(status);
+
+    els.topStagePill.textContent = `Stage: ${titleCase(stage)}`;
+    els.topProgressPill.textContent = `Progress: ${Math.max(0, Math.min(100, progress))}%`;
+    els.progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+
+    els.metricStatus.textContent = titleCase(status);
+    els.metricStage.textContent = titleCase(stage);
+  }
+
+  function renderTracker(payload) {
+    const stepsObj = payload?.steps || {};
+    const entries = Object.entries(stepsObj);
+
+    if (!entries.length) {
+      els.trackerList.innerHTML = '<div class="empty-state">Start a run to populate workflow stages.</div>';
+      return;
+    }
+
+    els.trackerList.innerHTML = entries.map(([key, step]) => {
+      const stepStatus = String(step?.status || 'pending').toLowerCase();
+      const classes = [
+        'tracker-step',
+        ['running', 'active', 'in_progress'].includes(stepStatus) ? 'active' : '',
+        ['completed', 'success', 'done'].includes(stepStatus) ? 'complete' : '',
+        ['failed', 'error'].includes(stepStatus) ? 'failed' : ''
+      ].join(' ').trim();
+
+      const detail = step?.message || 'Awaiting execution details.';
+      const metaBits = [];
+      if (step?.provider) metaBits.push(`Provider: ${step.provider}`);
+      if (step?.model) metaBits.push(`Model: ${step.model}`);
+      if (step?.latency_seconds !== undefined && step?.latency_seconds !== null) {
+        metaBits.push(`Duration: ${step.latency_seconds}s`);
+      }
+
+      return `
+        <div class="${classes}">
+          <div class="tracker-topline">
+            <div class="tracker-name">${escapeHtml(titleCase(key))}</div>
+            <div class="pill ${statusClass(stepStatus)}">${escapeHtml(titleCase(stepStatus))}</div>
+          </div>
+          <div class="tracker-meta">${escapeHtml(detail)}</div>
+          ${metaBits.length ? `<div class="tracker-meta" style="margin-top:8px;">${escapeHtml(metaBits.join(' • '))}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderSummary(payload) {
+    const progress = getNumericProgress(payload);
+
+    const items = [
+      { label: 'Job ID', value: state.jobId || payload?.job_id || '—' },
+      { label: 'Winner', value: getWinner(payload) },
+      { label: 'Progress', value: `${progress}%` },
+      { label: 'Stage', value: titleCase(payload?.stage || '—') },
+      { label: 'Optimizer Mode', value: getOptimizerModeLabel(payload) },
+      { label: 'Generated At', value: payload?.updated_at || payload?.completed_at || '—' }
+    ];
+
+    els.summaryList.innerHTML = items.map(item => `
+      <div class="summary-item">
+        <div class="summary-item-top">
+          <div class="summary-name">${escapeHtml(item.label)}</div>
+        </div>
+        <div class="summary-meta">${escapeHtml(safeText(item.value))}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderArtifacts(payload) {
+    const artifacts = normalizeArtifacts(payload);
+    if (!artifacts.length) {
+      els.artifactList.innerHTML = '<div class="empty-state">Artifacts will appear here when generation completes.</div>';
+      els.openWinnerArtifactBtn.classList.add('hidden');
+      els.openWinnerArtifactBtn.removeAttribute('href');
+      return;
+    }
+
+    els.artifactList.innerHTML = artifacts.map((artifact, idx) => {
+      const url = artifact.url || artifact.href || artifact.path || artifact.file || '#';
+      const name = artifact.name || artifact.label || `Artifact ${idx + 1}`;
+
+      let meta = artifact.type || artifact.kind || artifact.description || 'Generated deliverable';
+      if (typeof url === 'string' && url.endsWith('.html')) meta = 'Presentation-ready report';
+      if (typeof url === 'string' && url.endsWith('.json')) meta = 'Structured run record';
+
+      return `
+        <div class="artifact-item">
+          <div class="artifact-item-top">
+            <div class="artifact-name">${escapeHtml(name)}</div>
+            <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="pill info">Open</a>
+          </div>
+          <div class="artifact-meta">${escapeHtml(meta)}</div>
+        </div>
+      `;
+    }).join('');
+
+    const primary = artifacts[0];
+    const primaryUrl = primary?.url || primary?.href || primary?.path || primary?.file;
+    if (primaryUrl) {
+      els.openWinnerArtifactBtn.href = primaryUrl;
+      els.openWinnerArtifactBtn.classList.remove('hidden');
+    }
+  }
+
+  function renderHero(payload) {
+    const winnerName = getWinner(payload);
+    const scoreLabel = getWinningScoreLabel(payload);
+    const winnerText = getFinalOutput(payload);
+
+    els.heroBadges.innerHTML = `
+      <span class="pill success">Winner: ${escapeHtml(safeText(winnerName))}</span>
+      <span class="pill info">Score: ${escapeHtml(safeText(scoreLabel))}</span>
+    `;
+
+    els.heroOutput.textContent = winnerText;
+    els.metricWinner.textContent = safeText(winnerName);
+    els.metricDuration.textContent = getDurationLabel(payload);
+  }
+
+  function renderDecision(payload) {
+    const judge = getJudge(payload);
+    const parts = [];
+
+    if (payload?.summary?.label) {
+      parts.push(`Decision summary:\n${payload.summary.label}`);
+    }
+
+    if (judge?.reason) {
+      parts.push(`Why this won:\n${judge.reason}`);
+    }
+
+    if (judge?.confidence) {
+      parts.push(`Judge confidence: ${titleCase(judge.confidence)}`);
+    }
+
+    if (payload?.summary?.next_action) {
+      parts.push(`Decision outcome: ${titleCase(payload.summary.next_action)}`);
+    }
+
+    els.decisionBody.textContent =
+      parts.join('\n\n') || 'Judge reasoning and decision notes will appear here.';
+  }
+
+  function renderComparison(payload) {
+    const winner = String(getWinner(payload) || '').toLowerCase();
+    const models = getModelComparisonItems(payload);
+
+    if (!models.length) {
+      els.comparisonGrid.innerHTML = '<div class="empty-state">Comparison cards will populate once provider outputs are available.</div>';
+      return;
+    }
+
+    els.comparisonGrid.innerHTML = models.map((item, index) => {
+      const isWinner = item.id === winner;
+      const excerpt = safeText(item.output || '', '').slice(0, 420) || 'No output available.';
+      const scoreSummary = formatScoreSummary(item.scores);
+      const fullId = `model-full-${index}`;
+
+      return `
+        <div class="model-card ${isWinner ? 'winner' : ''}">
+          <div class="model-top">
+            <div>
+              <div class="model-name">${escapeHtml(safeText(item.model))}</div>
+              <div class="model-provider">${escapeHtml(safeText(item.provider))}</div>
+            </div>
+            <div class="model-score">${escapeHtml(isWinner ? 'Winning response' : 'Candidate')}</div>
+          </div>
+
+          <div class="muted-note">${escapeHtml(scoreSummary)}</div>
+          <div class="model-excerpt">${escapeHtml(excerpt)}</div>
+
+          <div>
+            <button class="secondary-btn" type="button" onclick="toggleModelFull('${fullId}')">
+              ${isWinner ? 'Inspect winning output' : 'Expand full output'}
+            </button>
+          </div>
+
+          <div id="${fullId}" class="model-full">${escapeHtml(safeText(item.output || 'No full output available.'))}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderLogs(payload) {
+    const logs = Array.isArray(payload?.logs) ? payload.logs : [];
+    if (!logs.length) {
+      els.logsBox.textContent = 'No logs yet.';
+      return;
+    }
+
+    const wasNearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
+    els.logsBox.textContent = logs.map(line => typeof line === 'string' ? line : JSON.stringify(line)).join('\n');
+
+    if (state.autoScrollLogs && wasNearBottom) {
+      els.logsBox.scrollTop = els.logsBox.scrollHeight;
+    }
+  }
+
+  function renderRaw(payload) {
+    els.rawBox.textContent = JSON.stringify(payload, null, 2);
+  }
+
+  function renderPayload(payload) {
+    state.lastPayload = payload;
+
+    renderTopStatus(payload);
+    renderTracker(payload);
+    renderSummary(payload);
+    renderArtifacts(payload);
+    renderHero(payload);
+    renderDecision(payload);
+    renderComparison(payload);
+    renderLogs(payload);
+    renderRaw(payload);
+
+    els.lastUpdateLabel.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+
+    const status = String(payload?.status || '').toLowerCase();
+    if (['completed', 'failed', 'error'].includes(status)) {
+      stopPolling();
+      els.runBtn.disabled = false;
+      els.runBtn.textContent = status === 'completed' ? 'Run Another Workflow' : 'Retry Workflow';
+    }
+  }
+
+  async function startRun() {
+    const prompt = els.promptInput.value.trim();
+    if (!prompt) {
+      alert('Please enter a prompt before starting the workflow.');
+      return;
+    }
+
+    els.runBtn.disabled = true;
+    els.runBtn.textContent = 'Starting...';
+
+    const requestBody = {
+      prompt,
+      options: {
+        force_optimizer_off: true,
+        generate_artifacts: els.artifactToggle.value !== 'off'
+      }
+    };
+
+    try {
+      const response = await fetch('/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `Run request failed with ${response.status}`);
+      }
+
+      const result = await response.json();
+      const jobId = result.job_id || result.id;
+      if (!jobId) throw new Error('No job_id returned from /run');
+
+      state.jobId = jobId;
+      els.jobIdLabel.textContent = jobId;
+      els.runBtn.textContent = 'Running...';
+
+      stopPolling();
+      await pollStatus();
+      state.pollHandle = setInterval(pollStatus, 2000);
+    } catch (error) {
+      els.runBtn.disabled = false;
+      els.runBtn.textContent = 'Start Workflow';
+      alert(`Failed to start workflow: ${error.message}`);
+    }
+  }
+
+  async function pollStatus() {
+    if (!state.jobId) return;
+
+    try {
+      const response = await fetch(`/status/${encodeURIComponent(state.jobId)}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `Status request failed with ${response.status}`);
+      }
+
+      const payload = await response.json();
+      renderPayload(payload);
+    } catch (error) {
+      console.error('Polling error:', error);
+    }
+  }
+
+  function stopPolling() {
+    if (state.pollHandle) {
+      clearInterval(state.pollHandle);
+      state.pollHandle = null;
+    }
+  }
+
+  function toggleModelFull(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('open');
+  }
+  window.toggleModelFull = toggleModelFull;
+
+  els.runBtn.addEventListener('click', startRun);
+
+  els.copyWinnerBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(els.heroOutput.textContent || '');
+      els.copyWinnerBtn.textContent = 'Copied';
+      setTimeout(() => {
+        els.copyWinnerBtn.textContent = 'Copy winning output';
+      }, 1200);
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tab).classList.add('active');
     });
-  </script>
+  });
+
+  els.logsBox.addEventListener('scroll', () => {
+    const nearBottom = els.logsBox.scrollTop + els.logsBox.clientHeight >= els.logsBox.scrollHeight - 30;
+    state.autoScrollLogs = nearBottom;
+  });
+</script>
 </body>
 </html>
