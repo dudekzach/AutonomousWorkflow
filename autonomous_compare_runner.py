@@ -37,7 +37,7 @@ MAX_CONTINUATION_ATTEMPTS = int(os.getenv("MAX_CONTINUATION_ATTEMPTS", "3"))
 ENABLE_OPTIMIZER_BY_DEFAULT = os.getenv("ENABLE_OPTIMIZER", "true").lower() == "true"
 ENABLE_STITCHING_BY_DEFAULT = os.getenv("ENABLE_STITCHING", "true").lower() == "true"
 LOG_TO_STDOUT = os.getenv("LOG_TO_STDOUT", "true").lower() == "true"
-FORCE_DISABLE_OPTIMIZER = True
+FORCE_DISABLE_OPTIMIZER = False
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
 
