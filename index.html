@@ -1057,8 +1057,9 @@
           <div class="field-note">
             Using the current OpenAI and Claude workflow configuration.
           </div>
-          <select id="optimizerToggle" disabled>
-            <option value="off" selected>Optimizer: Disabled</option>
+          <select id="optimizerToggle">
+            <option value="on" selected>Optimizer: On</option>
+            <option value="off">Optimizer: Off</option>
           </select>
           <select id="artifactToggle">
             <option value="on">Artifacts: On</option>
@@ -1373,20 +1374,22 @@
 
     function getOptimizerModeLabel(payload) {
       const optimizerStep = payload?.steps?.optimizer;
-      const requestOptions = payload?.request?.options || {};
-
-      if (
-        optimizerStep?.status === 'skipped' ||
-        optimizerStep?.meta?.used_original_prompt === true ||
-        requestOptions.force_optimizer_off === true ||
-        requestOptions.optimize_prompt === false ||
-        requestOptions.optimizer_enabled === false ||
-        requestOptions.enable_optimizer === false
-      ) {
+      const optimizedPrompt = payload?.outputs?.optimized_prompt;
+      const originalPrompt = payload?.request?.prompt;
+    
+      if (optimizerStep?.status === 'completed' && optimizedPrompt && optimizedPrompt !== originalPrompt) {
+        return 'Enabled / optimized prompt';
+      }
+    
+      if (optimizerStep?.status === 'skipped') {
         return 'Disabled / original prompt';
       }
-
-      return 'Optimized / default path';
+    
+      if (optimizerStep?.status === 'failed') {
+        return 'Failed / fallback used';
+      }
+    
+      return 'In progress / unknown';
     }
 
     function getModelComparisonItems(payload) {
@@ -1685,10 +1688,10 @@
       const requestBody = {
         prompt,
         options: {
+          optimize_prompt: els.optimizerToggle.value === 'on',
           generate_artifacts: els.artifactToggle.value !== 'off'
         }
       };
-
       try {
         const response = await fetch('/run', {
           method: 'POST',
