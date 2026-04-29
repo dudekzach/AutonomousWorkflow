@@ -1121,14 +1121,69 @@ def optimize_prompt(
             return result
 
     else:
-        openai_result = run_step(
-            "prompt_optimizer_openai",
-            lambda: optimize_prompt_with_openai(
-                original_prompt,
-                target_model=target_model,
-                use_case=use_case,
-                tone_style=tone_style,
-                output_format=output_format,
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {
+            executor.submit(
+                run_step,
+                "prompt_optimizer_openai",
+                lambda: optimize_prompt_with_openai(
+                    original_prompt,
+                    target_model=target_model,
+                    use_case=use_case,
+                    tone_style=tone_style,
+                    output_format=output_format,
+                ),
+                logs,
+                True,
+                None,
+                status_callback,
+                {
+                    "provider": "OpenAI",
+                    "model": OPENAI_MODEL,
+                    "strategy": strategy,
+                },
+            ): "openai",
+            executor.submit(
+                run_step,
+                "prompt_optimizer_claude",
+                lambda: optimize_prompt_with_claude(
+                    original_prompt,
+                    target_model=target_model,
+                    use_case=use_case,
+                    tone_style=tone_style,
+                    output_format=output_format,
+                ),
+                logs,
+                True,
+                None,
+                status_callback,
+                {
+                    "provider": "Claude",
+                    "model": CLAUDE_MODEL,
+                    "strategy": strategy,
+                },
+            ): "claude",
+        }
+
+        openai_result = None
+        claude_result = None
+
+        for future in as_completed(futures):
+            provider = futures[future]
+            result = future.result()
+
+            if provider == "openai":
+                openai_result = result
+            elif provider == "claude":
+                claude_result = result
+
+    if openai_result and claude_result:
+        selection = run_step(
+            "prompt_optimizer_selection",
+            lambda: select_best_optimized_prompt(
+                original_prompt=original_prompt,
+                openai_optimized=openai_result,
+                claude_optimized=claude_result,
             ),
             logs,
             swallow=True,
@@ -1136,112 +1191,42 @@ def optimize_prompt(
             status_callback=status_callback,
             event_meta={
                 "provider": "OpenAI",
-                "model": OPENAI_MODEL,
+                "model": JUDGE_MODEL,
                 "strategy": strategy,
             },
         )
-        claude_result = run_step(
-            "prompt_optimizer_claude",
-            lambda: optimize_prompt_with_claude(
-                original_prompt,
-                target_model=target_model,
-                use_case=use_case,
-                tone_style=tone_style,
-                output_format=output_format,
-            ),
-            logs,
-            swallow=True,
-            fallback=None,
-            status_callback=status_callback,
-            event_meta={
-                "provider": "Claude",
-                "model": CLAUDE_MODEL,
-                "strategy": strategy,
-            },
-        )
-
-        if openai_result and claude_result:
-            selection = run_step(
-                "prompt_optimizer_selection",
-                lambda: select_best_optimized_prompt(
-                    original_prompt=original_prompt,
-                    openai_optimized=openai_result,
-                    claude_optimized=claude_result,
-                ),
-                logs,
-                swallow=True,
-                fallback=None,
-                status_callback=status_callback,
-                event_meta={
-                    "provider": "OpenAI",
-                    "model": JUDGE_MODEL,
-                    "strategy": strategy,
+        if selection:
+            selected_provider = selection["selected_provider"]
+            selected_result = openai_result if selected_provider == "OpenAI" else claude_result
+            selected_result.strategy = "compare_both"
+            selected_result.selection_reason = selection["reason"]
+            selected_result.raw_response = json.dumps(
+                {
+                    "selected_provider": selected_provider,
+                    "selection_reason": selection["reason"],
+                    "openai_optimizer": openai_result.raw_response,
+                    "claude_optimizer": claude_result.raw_response,
                 },
+                indent=2,
             )
-            if selection:
-                selected_provider = selection["selected_provider"]
-                selected_result = openai_result if selected_provider == "OpenAI" else claude_result
-                selected_result.strategy = "compare_both"
-                selected_result.selection_reason = selection["reason"]
-                selected_result.raw_response = json.dumps(
-                    {
-                        "selected_provider": selected_provider,
-                        "selection_reason": selection["reason"],
-                        "openai_optimizer": openai_result.raw_response,
-                        "claude_optimizer": claude_result.raw_response,
-                    },
-                    indent=2,
-                )
-                selected_result.optimized_prompt = selection["selected_optimized_prompt"]
-                emit_output(status_callback, "optimized_prompt", selected_result.optimized_prompt)
-                return selected_result
+            selected_result.optimized_prompt = selection["selected_optimized_prompt"]
+            emit_output(status_callback, "optimized_prompt", selected_result.optimized_prompt)
+            return selected_result
 
-        if openai_result:
-            openai_result.strategy = "fallback_openai"
-            openai_result.selection_reason = (
-                "Claude optimizer or selection step failed, so OpenAI optimizer was used."
-            )
-            emit_output(status_callback, "optimized_prompt", openai_result.optimized_prompt)
-            return openai_result
-        if claude_result:
-            claude_result.strategy = "fallback_claude"
-            claude_result.selection_reason = (
-                "OpenAI optimizer or selection step failed, so Claude optimizer was used."
-            )
-            emit_output(status_callback, "optimized_prompt", claude_result.optimized_prompt)
-            return claude_result
-
-    add_log(logs, "All optimizer paths failed. Falling back to original prompt.", status_callback)
-    emit_event(
-        status_callback,
-        {
-            "type": "step_failed",
-            "step": "optimizer",
-            "message": "All optimizer paths failed",
-            "completed_at": now_iso(),
-            "latency_seconds": None,
-            "provider": None,
-            "model": None,
-            "attempts": 1,
-            "meta": {"strategy": "fallback_original_prompt"},
-            "error": "All optimizer paths failed",
-            "code": "OPTIMIZER_FAILED",
-            "retryable": False,
-        },
-    )
-    emit_output(status_callback, "optimized_prompt", original_prompt)
-    return PromptOptimizationResult(
-        original_prompt=original_prompt,
-        optimized_prompt=original_prompt,
-        annotated_explanation="Optimizer failed, so the original prompt was used as a safe fallback.",
-        optional_variants=[],
-        provider="None",
-        strategy="fallback_original_prompt",
-        target_model=target_model,
-        use_case=use_case,
-        tone_style=tone_style,
-        output_format=output_format,
-    )
+    if openai_result:
+        openai_result.strategy = "fallback_openai"
+        openai_result.selection_reason = (
+            "Claude optimizer or selection step failed, so OpenAI optimizer was used."
+        )
+        emit_output(status_callback, "optimized_prompt", openai_result.optimized_prompt)
+        return openai_result
+    if claude_result:
+        claude_result.strategy = "fallback_claude"
+        claude_result.selection_reason = (
+            "OpenAI optimizer or selection step failed, so Claude optimizer was used."
+        )
+        emit_output(status_callback, "optimized_prompt", claude_result.optimized_prompt)
+        return claude_result
 
 
 # =========================
