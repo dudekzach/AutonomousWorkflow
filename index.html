@@ -872,6 +872,132 @@
         font-size: 14px;
       }
     }
+
+      .markdown-body {
+        color: var(--text-primary);
+        font-size: 0.96rem;
+        line-height: 1.65;
+        word-break: break-word;
+      }
+
+      .markdown-body > *:first-child {
+        margin-top: 0;
+      }
+      
+      .markdown-body > *:last-child {
+        margin-bottom: 0;
+      }
+      
+      .markdown-body h1,
+      .markdown-body h2,
+      .markdown-body h3,
+      .markdown-body h4 {
+        margin: 1rem 0 0.55rem;
+        line-height: 1.25;
+        color: var(--text-primary);
+        font-weight: 700;
+      }
+      
+      .markdown-body h1 { font-size: 1.35rem; }
+      .markdown-body h2 { font-size: 1.15rem; }
+      .markdown-body h3 { font-size: 1.02rem; }
+      .markdown-body h4 { font-size: 0.96rem; }
+      
+      .markdown-body p,
+      .markdown-body ul,
+      .markdown-body ol,
+      .markdown-body blockquote,
+      .markdown-body pre,
+      .markdown-body table {
+        margin: 0.75rem 0;
+      }
+      
+      .markdown-body ul,
+      .markdown-body ol {
+        padding-left: 1.25rem;
+      }
+      
+      .markdown-body li + li {
+        margin-top: 0.25rem;
+      }
+      
+      .markdown-body strong {
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+      
+      .markdown-body em {
+        font-style: italic;
+      }
+      
+      .markdown-body a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      
+      .markdown-body a:hover {
+        text-decoration: underline;
+      }
+      
+      .markdown-body code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.9em;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        padding: 0.15rem 0.35rem;
+      }
+      
+      .markdown-body pre {
+        overflow-x: auto;
+        background: rgba(0,0,0,0.28);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+      }
+      
+      .markdown-body pre code {
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
+      
+      .markdown-body blockquote {
+        border-left: 3px solid rgba(255,255,255,0.18);
+        padding-left: 0.9rem;
+        color: var(--text-secondary);
+      }
+      
+      .markdown-body hr {
+        border: 0;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        margin: 1rem 0;
+      }
+      
+      .markdown-body table {
+        width: 100%;
+        border-collapse: collapse;
+        display: block;
+        overflow-x: auto;
+      }
+      
+      .markdown-body th,
+      .markdown-body td {
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 0.65rem 0.75rem;
+        text-align: left;
+      }
+      
+      .markdown-body th {
+        background: rgba(255,255,255,0.04);
+        font-weight: 600;
+      }
+      
+      .markdown-body img {
+        max-width: 100%;
+        border-radius: 12px;
+      }
+    
   </style>
 </head>
 <body>
@@ -1044,6 +1170,9 @@
     </section>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  
   <script>
     const state = {
       jobId: null,
@@ -1085,6 +1214,36 @@
       rawBox: document.getElementById('rawBox')
     };
 
+  marked.setOptions({
+    gfm: true,
+    breaks: true
+  });
+
+  function looksLikeMarkdown(text) {
+    if (!text || typeof text !== "string") return false;
+
+    return /(^#{1,6}\s)|(\*\*.+?\*\*)|(\*.+?\*)|(```)|(`[^`]+`)|(^[-*+]\s)|(^\d+\.\s)|(\|.+\|)/m.test(text);
+  }
+
+  function renderRichText(text) {
+    const raw = String(text ?? "").trim();
+
+    if (!raw) {
+      return '<div class="muted">No output available yet.</div>';
+    }
+
+    if (!looksLikeMarkdown(raw)) {
+      return `<div class="plain-output">${escapeHtml(raw).replace(/\n/g, "<br>")}</div>`;
+    }
+
+    const html = marked.parse(raw);
+    const safe = DOMPurify.sanitize(html, {
+      USE_PROFILES: { html: true }
+    });
+
+    return `<div class="markdown-body">${safe}</div>`;
+  }
+    
     function safeText(value, fallback = '—') {
       if (value === null || value === undefined || value === '') return fallback;
       if (typeof value === 'object') return JSON.stringify(value, null, 2);
