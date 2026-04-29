@@ -29,7 +29,7 @@ app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 # TEMPORARY DEBUG SWITCH:
 # Set to True to force optimizer off for all API calls.
 # Set back to False once you've finished diagnosing the 502 issue.
-FORCE_OPTIMIZER_OFF = True
+FORCE_OPTIMIZER_OFF = False
 
 REDIS_URL = os.getenv("REDIS_URL")
 if not REDIS_URL:
