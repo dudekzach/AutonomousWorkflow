@@ -37,7 +37,7 @@ MAX_CONTINUATION_ATTEMPTS = int(os.getenv("MAX_CONTINUATION_ATTEMPTS", "3"))
 ENABLE_OPTIMIZER_BY_DEFAULT = os.getenv("ENABLE_OPTIMIZER", "true").lower() == "true"
 ENABLE_STITCHING_BY_DEFAULT = os.getenv("ENABLE_STITCHING", "true").lower() == "true"
 LOG_TO_STDOUT = os.getenv("LOG_TO_STDOUT", "true").lower() == "true"
-FORCE_DISABLE_OPTIMIZER = True
+FORCE_DISABLE_OPTIMIZER = False
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
 
@@ -1121,44 +1121,61 @@ def optimize_prompt(
             return result
 
     else:
-        openai_result = run_step(
-            "prompt_optimizer_openai",
-            lambda: optimize_prompt_with_openai(
-                original_prompt,
-                target_model=target_model,
-                use_case=use_case,
-                tone_style=tone_style,
-                output_format=output_format,
-            ),
-            logs,
-            swallow=True,
-            fallback=None,
-            status_callback=status_callback,
-            event_meta={
-                "provider": "OpenAI",
-                "model": OPENAI_MODEL,
-                "strategy": strategy,
-            },
-        )
-        claude_result = run_step(
-            "prompt_optimizer_claude",
-            lambda: optimize_prompt_with_claude(
-                original_prompt,
-                target_model=target_model,
-                use_case=use_case,
-                tone_style=tone_style,
-                output_format=output_format,
-            ),
-            logs,
-            swallow=True,
-            fallback=None,
-            status_callback=status_callback,
-            event_meta={
-                "provider": "Claude",
-                "model": CLAUDE_MODEL,
-                "strategy": strategy,
-            },
-        )
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {
+                executor.submit(
+                    run_step,
+                    "prompt_optimizer_openai",
+                    lambda: optimize_prompt_with_openai(
+                        original_prompt,
+                        target_model=target_model,
+                        use_case=use_case,
+                        tone_style=tone_style,
+                        output_format=output_format,
+                    ),
+                    logs,
+                    swallow=True,
+                    fallback=None,
+                    status_callback=status_callback,
+                    event_meta={
+                        "provider": "OpenAI",
+                        "model": OPENAI_MODEL,
+                        "strategy": strategy,
+                    },
+                ): "openai",
+                executor.submit(
+                    run_step,
+                    "prompt_optimizer_claude",
+                    lambda: optimize_prompt_with_claude(
+                        original_prompt,
+                        target_model=target_model,
+                        use_case=use_case,
+                        tone_style=tone_style,
+                        output_format=output_format,
+                    ),
+                    logs,
+                    swallow=True,
+                    fallback=None,
+                    status_callback=status_callback,
+                    event_meta={
+                        "provider": "Claude",
+                        "model": CLAUDE_MODEL,
+                        "strategy": strategy,
+                    },
+                ): "claude",
+            }
+
+            openai_result = None
+            claude_result = None
+
+            for future in as_completed(futures):
+                provider = futures[future]
+                result = future.result()
+
+                if provider == "openai":
+                    openai_result = result
+                elif provider == "claude":
+                    claude_result = result
 
         if openai_result and claude_result:
             selection = run_step(
@@ -2547,7 +2564,7 @@ def main() -> None:
     print("WORKFLOW RESULT")
     print("=" * 80)
     print(json.dumps(result, indent=2))
-    
+
 
 if __name__ == "__main__":
     main()
