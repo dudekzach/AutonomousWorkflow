@@ -3,750 +3,773 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Zach Dudek's Autonomous Workflow Orchestration Architecture</title>
+  <title>Autonomous Workflow Architecture - Current State</title>
   <style>
-    :root{
-      --bg:#EEF0F8;
-      --bg-2:#E4E8F5;
-      --panel:#F8F9FE;
-      --panel-2:#F4F6FE;
-      --card:#1A234A;
-      --card-2:#222C58;
-      --text:#1B2140;
-      --text-strong:#161C36;
-      --text-inverse:#F6F8FF;
-      --muted:#5A6487;
-      --muted-strong:#4F5878;
-      --muted-inverse:#B6BFE2;
-      --line:#D8DDF0;
-      --line-strong:#C8D0E8;
-      --accent:#4F7FF0;
-      --accent-2:#6B93FF;
-      --good:#3DB7A4;
-      --warn:#D4A24A;
-      --rose:#D77A96;
-      --shadow:0 16px 36px rgba(26, 35, 74, .10);
-      --shadow-strong:0 24px 54px rgba(26, 35, 74, .14);
-      --radius:18px;
-      --radius-sm:14px;
-      --tab-h:56px;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:radial-gradient(circle at top left, #FBFCFF 0%, var(--bg) 38%, var(--bg-2) 100%);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}
-    body{min-height:100vh}
-    .app{max-width:1560px;margin:0 auto;padding:28px 24px 56px}
-    .hero{
-      display:grid;grid-template-columns:1.3fr .7fr;gap:18px;margin-bottom:18px;
-    }
-    .hero-card,.meta-card,.tab-shell,.inspector,.mini-panel,.footer-card{
-      background:linear-gradient(180deg, #FFFFFF, var(--panel));
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(8px);
-    }
-    .meta-card{
-      background:linear-gradient(180deg, #F3F6FF, #EDEFFC);
-      border-color:#CCD4EB;
-      box-shadow:0 18px 40px rgba(26,35,74,.10);
-    }
-    .hero-card{padding:26px 28px 22px}
-    .hero-card h1{margin:0 0 12px;font-size:42px;line-height:1.03;letter-spacing:-.03em;color:var(--text-strong)}
-    .hero-card p{margin:0;color:var(--muted-strong);font-size:16px;max-width:980px;line-height:1.65}
-    .pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-    .pill{
-      border:1px solid #CCD4EB;
-      background:#FFFFFF;
-      color:#5C6787;
-      border-radius:999px;
-      padding:8px 12px;
-      font-size:12px;
-      letter-spacing:.02em;
-      box-shadow:0 4px 12px rgba(26,35,74,.05);
-      font-weight:600;
-    }
-    .meta-card{padding:20px 22px}
-    .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .stat{
-      background:linear-gradient(180deg, var(--panel), var(--panel-2));
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:14px;
-      min-height:92px;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
-    }
-    .stat .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
-    .stat .v{margin-top:8px;font-size:22px;font-weight:800;color:var(--text-strong)}
-    .meta-note{margin-top:12px;color:#d7e0ef;font-size:13px;line-height:1.45}
-    .top-bar{
-      display:flex;justify-content:space-between;align-items:center;gap:16px;
-      margin-bottom:14px;
-    }
-    .tabs{
-      display:flex;gap:10px;flex-wrap:wrap;
-    }
-    .tab{
-      height:var(--tab-h);
-      padding:0 18px;
-      white-space:normal;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:linear-gradient(180deg, #FFFFFF, var(--panel));
-      color:var(--text);
-      font-weight:800;
-      cursor:pointer;
-      transition:.18s ease;
-      box-shadow:0 8px 18px rgba(28,52,84,.06);
-    }
-    .tab:hover{transform:translateY(-1px);border-color:#aec2da;box-shadow:0 10px 24px rgba(28,52,84,.10)}
-    .tab.active{
-      background:linear-gradient(135deg, var(--accent), var(--accent-2));
-      border-color:var(--accent);
-      color:#fff;
-      box-shadow:0 14px 28px rgba(79,127,240,.24);
-    }
-    .top-right{
-      display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    }
-    .legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .legend-item{
-      display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)
-    }
-    .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
-    .tab-shell{
-      padding:16px;
-      background:linear-gradient(180deg, #FFFFFF, var(--panel));
-      border:1px solid var(--line);
-      box-shadow:var(--shadow-strong);
-    }
-    .content-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.42fr);gap:16px;align-items:stretch}
-    .diagram-panel{
-      z-index:1;
-      min-height:900px;
-      background:linear-gradient(180deg, #FFFFFF, var(--panel));
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:18px;
-      position:relative;
-      overflow:hidden;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.95);
-    }
-    .diagram-title{
-      display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:16px;
-    }
-    .diagram-title h2{margin:0;font-size:24px;letter-spacing:-.02em}
-    .diagram-title p{margin:4px 0 0;color:var(--muted);font-size:13px}
-    .inspector{
-      z-index:2;
-      padding:16px;
-      position:sticky;
-      top:18px;
-      height:fit-content;
-      align-self:start;
-      margin-top:0;
-      background:linear-gradient(180deg, rgba(12,22,44,.20), rgba(12,22,44,.12));
-    }
-    .inspector h3{margin:0 0 8px;font-size:18px}
-    .inspector .muted{color:var(--muted);font-size:13px;line-height:1.5}
-    .detail-box{
-      margin-top:14px;padding:14px;border-radius:16px;
-      border:1px solid rgba(132,154,204,.16);
-      background:rgba(9,18,38,.10)
-    }
-    .detail-box h4{
-      margin:0 0 8px;
-      font-size:16px;
-      color:#1A234A;
-      font-weight:800;
-    }
-    .detail-box ul{margin:8px 0 0 18px;padding:0;color:#d8e2f6}
-    .detail-box li{margin:8px 0;line-height:1.4}
-    .detail-tag-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-    .tag{
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid #CCD4EB;
-      background:#FFFFFF;
-      font-size:11px;
-      color:#5C6787;
-      font-weight:700;
-      box-shadow:0 4px 10px rgba(26,35,74,.04);
+    :root {
+      --bg: #eef2fb;
+      --bg-2: #e6ebf9;
+      --panel: #fbfcff;
+      --panel-2: #f4f7ff;
+      --ink: #17213f;
+      --muted: #5f6b91;
+      --line: #d6dff3;
+      --line-2: #c7d2ec;
+      --navy: #1b2550;
+      --navy-2: #25305f;
+      --blue: #4d7cf3;
+      --blue-2: #7297ff;
+      --green: #2bb78a;
+      --amber: #d59a2f;
+      --rose: #d96d89;
+      --shadow: 0 16px 38px rgba(23, 33, 63, 0.10);
+      --shadow-strong: 0 24px 56px rgba(23, 33, 63, 0.14);
+      --radius: 20px;
+      --radius-sm: 14px;
     }
 
-    .flow-grid-6{display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));gap:14px;align-items:start}
-    .flow-grid-5{display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:14px;align-items:start}
-    .flow-grid-4{display:grid;grid-template-columns:repeat(4, minmax(240px, 1fr));gap:16px;align-items:start}
-    .column{
-      position:relative;
-      min-height:620px;
-      padding:14px;
-      border-radius:18px;
-      border:1px solid rgba(132,154,204,.16);
-      background:linear-gradient(180deg, rgba(9,18,38,.18), rgba(9,18,38,.10));
-    }
-    .column::after{
-      content:"→";
-      position:absolute;right:-13px;top:50%;transform:translateY(-50%);
-      width:26px;height:26px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      color:white;display:flex;align-items:center;justify-content:center;
-      font-weight:800;border:1px solid rgba(79,127,240,.18);
-      box-shadow:0 10px 20px rgba(79,127,240,.18);
-    }
-    .column:last-child::after{display:none}
-    .col-head{
-      margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed #d4deea
-    }
-    .col-head .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
-    .col-head h3{margin:6px 0 0;font-size:19px;color:var(--text-strong)}
-    .node{
-      padding:14px;
-      border-radius:16px;
-      border:1px solid rgba(18,39,67,.08);
-      background:linear-gradient(180deg, var(--card), var(--card-2));
-      margin-bottom:12px;
-      cursor:pointer;
-      transition:.18s ease;
-      position:relative;
-      overflow:hidden;
-      box-shadow:0 16px 28px rgba(26,35,74,.18);
-    }
-    .node:hover{transform:translateY(-2px);border-color:rgba(95,143,255,.40);box-shadow:0 18px 30px rgba(26,35,74,.22)}
-    .node.active{outline:2px solid rgba(47,111,237,.75);border-color:rgba(47,111,237,.75)}
-    .node small{display:block;color:var(--muted-inverse);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
-    .node strong{display:block;font-size:15px;line-height:1.25;color:var(--text-inverse)}
-    .node span{display:block;margin-top:8px;color:var(--muted-inverse);font-size:12px;line-height:1.5}
-    .node .corner{
-      position:absolute;top:10px;right:10px;font-size:11px;color:var(--muted-inverse)
-    }
-    .accent-blue{border-top:4px solid #67a3ff}
-    .accent-violet{border-top:4px solid #8b8fff}
-    .accent-cyan{border-top:4px solid #4fd1c5}
-    .accent-green{border-top:4px solid #6ee7a8}
-    .accent-amber{border-top:4px solid #f6c177}
-    .accent-rose{border-top:4px solid #f38ba8}
-
-    .lane-wrap{
-      display:grid;gap:14px
-    }
-    .lane{
-      border:1px solid rgba(132,154,204,.16);
-      border-radius:18px;padding:14px;
-      background:linear-gradient(180deg, rgba(9,18,38,.18), rgba(9,18,38,.10));
-    }
-    .lane h3{margin:0 0 12px;font-size:18px}
-    .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{
-      padding:8px 12px;border-radius:999px;
-      border:1px solid rgba(132,154,204,.16);
-      background:rgba(9,18,38,.12);
-      font-size:12px
-    }
-    .h-flow{
-      display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:12px;align-items:center;margin-top:12px
-    }
-    .step{
-      min-height:128px;border-radius:16px;padding:12px;
-      border:1px solid rgba(132,154,204,.16);
-      background:linear-gradient(180deg, rgba(28,42,74,.96), rgba(22,33,59,.95));
-      position:relative;cursor:pointer;transition:.18s ease
-    }
-    .step:hover{transform:translateY(-2px)}
-    .step::after{
-      content:"→";position:absolute;right:-10px;top:50%;transform:translateY(-50%);
-      width:20px;height:20px;border-radius:999px;background:var(--accent);color:white;
-      display:flex;align-items:center;justify-content:center;font-size:11px
-    }
-    .step:last-child::after{display:none}
-    .step small{display:block;color:var(--muted-inverse);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
-    .step strong{display:block;font-size:14px;color:var(--text-inverse)}
-    .step span{display:block;margin-top:8px;color:var(--muted-inverse);font-size:12px;line-height:1.45}
-
-    .two-paths{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
-    .path-card{
-      border-radius:18px;padding:14px;border:1px solid rgba(132,154,204,.16);
-      background:linear-gradient(180deg, rgba(9,18,38,.18), rgba(9,18,38,.10));
-    }
-    .path-card h4{margin:0 0 10px;font-size:17px}
-    .path-stack{display:grid;gap:10px}
-    .path-step{
-      padding:12px;border-radius:14px;background:linear-gradient(180deg, rgba(28,42,74,.96), rgba(22,33,59,.95));
-      border:1px solid rgba(132,154,204,.16);cursor:pointer
-    }
-    .path-step small{display:block;color:var(--muted-inverse);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-    .path-step strong{display:block;font-size:14px;color:var(--text-inverse)}
-    .path-step span{display:block;color:var(--muted-inverse);font-size:12px;line-height:1.45;margin-top:8px}
-    .connector-line{
-      height:30px;margin:8px 0 4px;border-left:2px dashed rgba(123,156,222,.45);margin-left:16px
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, #ffffff 0%, var(--bg) 34%, var(--bg-2) 100%);
     }
 
-    .matrix{
-      display:grid;grid-template-columns:repeat(3,1fr);gap:12px
-    }
-    .matrix-card{
-      min-height:176px;padding:14px;border-radius:16px;background:linear-gradient(180deg, rgba(28,42,74,.96), rgba(22,33,59,.95));
-      border:1px solid rgba(132,154,204,.16);cursor:pointer
-    }
-    .matrix-card small{display:block;color:var(--muted-inverse);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
-    .matrix-card strong{display:block;font-size:15px;color:var(--text-inverse)}
-    .matrix-card span{display:block;color:var(--muted-inverse);font-size:12px;line-height:1.5;margin-top:8px}
-
-    .footer-grid{
-      display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px
-    }
-    .footer-card{padding:16px}
-    .footer-card h3{margin:0 0 10px;font-size:18px}
-    .footer-card ul{margin:0 0 0 18px;padding:0;color:#dae4f6}
-    .footer-card li{margin:10px 0;line-height:1.45}
-    .callout{
-      margin-top:12px;padding:12px 14px;border-radius:14px;
-      border:1px solid rgba(132,154,204,.16);background:rgba(9,18,38,.12);
-      color:#dbe4f8;font-size:13px;line-height:1.5
+    body.sheet-open { overflow: hidden; }
+    .app {
+      max-width: 1540px;
+      margin: 0 auto;
+      padding: 28px 24px 56px;
     }
 
-    .hidden{display:none}
-
-    @media (max-width: 1480px){
-      .flow-grid-6{grid-template-columns:repeat(3,1fr)}
-      .flow-grid-5{grid-template-columns:repeat(3,1fr)}
-      .column{min-height:auto}
-      .column::after{display:none}
-      .h-flow{grid-template-columns:repeat(3,1fr)}
-      .step::after{display:none}
-    }
-    @media (max-width: 1120px){
-      .hero{grid-template-columns:1fr}
-      .content-grid{grid-template-columns:1fr}
-      .inspector{
-        position:relative;
-        top:0;
-        min-height:auto !important;
-      }
-      .diagram-panel{min-height:auto}
-      .flow-grid-5,.flow-grid-4{grid-template-columns:repeat(2,1fr)}
-      .two-paths,.footer-grid,.matrix,.meta-grid{grid-template-columns:1fr}
-    }
-    @media (max-width: 760px){
-      .app{padding:16px 12px 28px}
-      .hero-card,.meta-card,.tab-shell,.diagram-panel,.inspector,.footer-card{border-radius:16px}
-      .hero-card{padding:20px 18px}
-      .meta-card{padding:16px}
-      .hero-card h1{font-size:28px;line-height:1.08}
-      .hero-card p{font-size:14px;line-height:1.55}
-      .pills{gap:8px}
-      .pill{font-size:11px;padding:7px 10px}
-      .top-bar{flex-direction:column;align-items:stretch;gap:12px}
-      .tabs{
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        gap:10px;
-      }
-      .tab{
-        width:100%;
-        min-height:50px;
-        height:auto;
-        padding:10px 12px;
-        text-align:left;
-        line-height:1.25;
-        font-size:13px;
-      }
-      .top-right{justify-content:flex-start}
-      .legend{row-gap:6px}
-      .diagram-title{display:block}
-      .diagram-title h2{font-size:22px}
-      .diagram-title p{font-size:13px;line-height:1.5}
-      .flow-grid-6,.flow-grid-5,.flow-grid-4,.h-flow{grid-template-columns:1fr}
-      .two-paths,.footer-grid,.matrix,.meta-grid{grid-template-columns:1fr}
-      .column,.lane,.path-card,.footer-card,.detail-box,.matrix-card{
-        padding:12px;
-      }
-      .column{min-height:auto}
-      .col-head h3{font-size:18px}
-      .node,.step,.path-step,.matrix-card{
-        padding:12px;
-        border-radius:14px;
-      }
-      .node strong,.step strong,.path-step strong,.matrix-card strong{
-        font-size:15px;
-      }
-      .node span,.step span,.path-step span,.matrix-card span{
-        font-size:12px;
-        line-height:1.5;
-      }
-      .step{min-height:auto}
-      .inspector{
-        position:relative;
-        top:0;
-        min-height:auto !important;
-      }
-      .detail-tag-row{gap:6px}
-      .tag{font-size:10px;padding:6px 9px}
-      .stat{min-height:auto;padding:12px}
-      .stat .v{font-size:20px}
-      .h-flow,.flow-grid-6,.flow-grid-5,.flow-grid-4,.matrix,.two-paths,.footer-grid{
-        gap:10px;
-      }
-      .lane-wrap{gap:10px}
-      .chips{gap:6px}
-      .chip{font-size:11px;padding:7px 10px}
-    }
-    @media (max-width: 480px){
-      .app{padding:12px 10px 24px}
-      .hero-card h1{font-size:24px}
-      .tabs{grid-template-columns:1fr}
-      .tab{
-        font-size:13px;
-        min-height:46px;
-      }
-      .diagram-panel,.inspector{padding:12px}
-      .hero-card p,.muted,.detail-box ul,.footer-card li{font-size:13px;color:var(--muted-strong)}
-      .node small,.step small,.path-step small,.matrix-card small{
-        font-size:10px;
-      }
-    }
-  </style>
-
-  <style id="contrast-precision-fix">
-    /* Precision fix: top-right summary/meta block */
-    .meta-card{
-      background: linear-gradient(180deg, #EEF2FC 0%, #E4EAF8 100%) !important;
-      border-color: #C7D1E8 !important;
-      box-shadow: 0 18px 40px rgba(26,35,74,.10) !important;
-    }
-    .meta-card .stat{
-      background: linear-gradient(180deg, #FFFFFF 0%, #F2F5FD 100%) !important;
-      border: 1px solid #C5D0E8 !important;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.98),
-        0 8px 18px rgba(26,35,74,.05) !important;
-    }
-    .meta-card .stat .k{
-      color: #617093 !important;
-      font-weight: 700 !important;
-      letter-spacing: .08em !important;
-    }
-    .meta-card .stat .v{
-      color: #1A234A !important;
-      font-weight: 800 !important;
-    }
-    .meta-card .meta-note{
-      color: #75819D !important;
-      font-weight: 500 !important;
-      line-height: 1.65 !important;
+    .hero {
+      display: grid;
+      grid-template-columns: 1.4fr 0.9fr;
+      gap: 18px;
+      margin-bottom: 18px;
     }
 
-    /* Precision fix: right-side inspector stack */
-    .inspector{
-      background: linear-gradient(180deg, #EDF2FC 0%, #E4E9F7 100%) !important;
-      border-color: #C7D1E8 !important;
-      box-shadow: 0 18px 40px rgba(26,35,74,.10) !important;
-    }
-    .inspector h3{
-      color: #1A234A !important;
-      font-weight: 800 !important;
-    }
-    .inspector .muted{
-      color: #5D6987 !important;
-      font-weight: 500 !important;
-      line-height: 1.7 !important;
-    }
-    .inspector .detail-box{
-      background: linear-gradient(180deg, #FFFFFF 0%, #F1F4FC 100%) !important;
-      border: 1px solid #C5D0E8 !important;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.98),
-        0 10px 24px rgba(26,35,74,.06) !important;
-    }
-    .inspector .detail-box h4{
-      color: #1A234A !important;
-      font-weight: 800 !important;
-    }
-    .inspector .tag{
-      background: #FFFFFF !important;
-      border: 1px solid #C5D0E8 !important;
-      color: #5B6786 !important;
-      font-weight: 700 !important;
-      box-shadow: 0 4px 10px rgba(26,35,74,.04) !important;
+    .hero-card,
+    .meta-card,
+    .shell,
+    .inspector,
+    .footer-card,
+    .note-card {
+      background: linear-gradient(180deg, #ffffff, var(--panel));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
     }
 
-    /* Precision fix: footer/light cards at bottom of tabs 3 and 4 */
-    .footer-card{
-      background: linear-gradient(180deg, #FFFFFF 0%, #F4F7FD 100%) !important;
-      border: 1px solid #C8D2E9 !important;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.98),
-        0 10px 24px rgba(26,35,74,.05) !important;
+    .hero-card { padding: 28px; }
+    .hero-card h1 {
+      margin: 0 0 12px;
+      font-size: 42px;
+      line-height: 1.03;
+      letter-spacing: -0.03em;
     }
-    .footer-card h3{
-      color: #1A234A !important;
-      font-weight: 800 !important;
-    }
-    .footer-card ul{
-      color: #5A6683 !important;
-    }
-    .footer-card li{
-      color: #5A6683 !important;
-      font-weight: 500 !important;
-      line-height: 1.62 !important;
-    }
-    .footer-card strong{
-      color: #31415F !important;
-    }
-    .footer-card .callout{
-      background: linear-gradient(180deg, #EEF3FC 0%, #E6ECF8 100%) !important;
-      border: 1px solid #C8D2E9 !important;
-      color: #5A6683 !important;
-      font-weight: 500 !important;
-      line-height: 1.62 !important;
+    .hero-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.68;
+      max-width: 980px;
     }
 
-    /* Also catch any light copy inside these regions that might still inherit too-pale values */
-    .meta-card p,
-    .meta-card span,
-    .meta-card div,
-    .inspector p,
-    .inspector li,
-    .inspector span,
-    .footer-card p,
-    .footer-card span{
-      color: inherit;
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
     }
-  </style>
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line-2);
+      background: #ffffff;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      box-shadow: 0 6px 14px rgba(23, 33, 63, 0.05);
+    }
+    .pill .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--blue);
+    }
 
+    .meta-card {
+      padding: 20px 22px;
+      background: linear-gradient(180deg, #f7f9ff, #eef3ff);
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .stat {
+      min-height: 96px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f7f9ff);
+      padding: 14px;
+    }
+    .stat .k {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.10em;
+      color: var(--muted);
+    }
+    .stat .v {
+      margin-top: 8px;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+    .meta-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
 
-  <style id="quick-reading-guide-final-fix">
-    /* Final fix: only the Quick Reading Guide box inside the inspector */
-    .inspector .detail-box ul{
-      color: #5A6683 !important;
-      padding-left: 20px !important;
+    .shell {
+      padding: 16px;
+      box-shadow: var(--shadow-strong);
     }
-    .inspector .detail-box li{
-      color: #5A6683 !important;
-      font-weight: 600 !important;
-      line-height: 1.68 !important;
-    }
-    .inspector .detail-box li::marker{
-      color: #A1AEC9 !important;
-    }
-    .inspector .detail-box li strong{
-      color: #1A234A !important;
-      font-weight: 800 !important;
-    }
-    .inspector .detail-box:last-of-type{
-      background: linear-gradient(180deg, #FFFFFF 0%, #F3F6FD 100%) !important;
-      border: 1px solid #C4CEE7 !important;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.98),
-        0 10px 24px rgba(26,35,74,.06) !important;
-    }
-    .inspector .detail-box:last-of-type h4{
-      color: #1A234A !important;
-      font-weight: 800 !important;
-    }
-    .inspector .detail-box:last-of-type p,
-    .inspector .detail-box:last-of-type span{
-      color: #5A6683 !important;
-    }
-  </style>
 
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
 
-  <style id="mobile-ux-enhancements">
-    /* Desktop keeps current structure. Improve active states globally. */
-    .node, .step, .path-step, .matrix-card {
+    .tabs { display: flex; gap: 10px; flex-wrap: wrap; }
+    .tab {
+      height: 54px;
+      padding: 0 18px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, var(--panel));
+      color: var(--ink);
       cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
+      font-weight: 800;
+      transition: 0.18s ease;
+      box-shadow: 0 8px 18px rgba(23, 33, 63, 0.06);
+    }
+    .tab:hover { transform: translateY(-1px); }
+    .tab.active {
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--blue-2));
+      border-color: var(--blue);
+      box-shadow: 0 14px 26px rgba(77, 124, 243, 0.26);
     }
 
-    .node::before, .step::before, .path-step::before, .matrix-card::before {
-      content: "";
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legend-item .dot { width: 10px; height: 10px; border-radius: 999px; }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.45fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .diagram-panel {
+      min-height: 920px;
+      background: linear-gradient(180deg, #ffffff, var(--panel));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .diagram-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .diagram-title h2 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.02em;
+    }
+    .diagram-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      max-width: 900px;
+    }
+
+    .inspector {
+      padding: 16px;
+      position: sticky;
+      top: 16px;
+      background: linear-gradient(180deg, #ffffff, #f5f8ff);
+    }
+    .inspector h3 { margin: 0 0 8px; font-size: 18px; }
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .detail-box {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+    }
+    .detail-box h4 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      color: var(--ink);
+    }
+    .detail-box ul { margin: 8px 0 0 18px; color: var(--ink); }
+    .detail-box li { margin: 8px 0; line-height: 1.45; }
+    .tag-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .tag {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line-2);
+      background: #fff;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .hidden { display: none; }
+
+    .flow-grid-5,
+    .flow-grid-4,
+    .flow-grid-3 {
+      display: grid;
+      gap: 14px;
+      align-items: start;
+    }
+    .flow-grid-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .flow-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .flow-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .column {
+      position: relative;
+      min-height: 610px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(93, 117, 180, 0.18);
+      background: linear-gradient(180deg, rgba(241, 245, 255, 0.94), rgba(249, 251, 255, 0.96));
+    }
+    .column::after {
+      content: "→";
       position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .18s ease;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+      right: -13px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--blue), var(--blue-2));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      box-shadow: 0 10px 20px rgba(77, 124, 243, 0.20);
     }
-    .node:hover::before, .step:hover::before, .path-step:hover::before, .matrix-card:hover::before {
-      opacity: 1;
+    .column:last-child::after { display: none; }
+
+    .col-head {
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--line-2);
+    }
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+    .col-head h3 {
+      margin: 6px 0 0;
+      font-size: 19px;
+      color: var(--ink);
     }
 
-    .node.active, .step.active, .path-step.active, .matrix-card.active {
-      outline: 2px solid rgba(79,127,240,.85) !important;
-      border-color: rgba(79,127,240,.65) !important;
-      box-shadow: 0 18px 34px rgba(79,127,240,.18), 0 16px 28px rgba(26,35,74,.18) !important;
-      transform: translateY(-2px);
-    }
-
-    .node .tap-hint, .step .tap-hint, .path-step .tap-hint, .matrix-card .tap-hint {
-      display: none;
-    }
-
-    /* Mobile bottom sheet */
-    .mobile-sheet-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(10, 16, 32, .38);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .22s ease;
-      z-index: 90;
-    }
-
-    .mobile-sheet {
-      position: fixed;
-      left: 12px;
-      right: 12px;
-      bottom: 10px;
-      background: linear-gradient(180deg, #FFFFFF 0%, #F5F8FE 100%);
-      border: 1px solid #C8D2E9;
-      border-radius: 20px;
-      box-shadow: 0 24px 60px rgba(26,35,74,.22);
-      transform: translateY(calc(100% + 24px));
-      opacity: 0;
-      pointer-events: none;
-      transition: transform .26s ease, opacity .22s ease;
-      z-index: 100;
-      max-height: 78vh;
+    .node,
+    .step,
+    .matrix-card,
+    .timeline-card {
+      position: relative;
+      margin-bottom: 12px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(14, 27, 55, 0.08);
+      cursor: pointer;
+      transition: 0.18s ease;
       overflow: hidden;
     }
 
-    .mobile-sheet.open {
-      transform: translateY(0);
-      opacity: 1;
-      pointer-events: auto;
+    .node {
+      background: linear-gradient(180deg, var(--navy), var(--navy-2));
+      color: #f7f9ff;
+      box-shadow: 0 16px 28px rgba(23, 33, 63, 0.18);
+    }
+    .node:hover,
+    .step:hover,
+    .matrix-card:hover,
+    .timeline-card:hover { transform: translateY(-2px); }
+    .node.active,
+    .step.active,
+    .matrix-card.active,
+    .timeline-card.active { outline: 2px solid rgba(77, 124, 243, 0.75); }
+
+    .node small,
+    .step small,
+    .matrix-card small,
+    .timeline-card small {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
+    .node small { color: #b8c4ee; }
+    .node strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.28;
+      color: #fff;
+    }
+    .node span {
+      display: block;
+      margin-top: 8px;
+      color: #cfdbff;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .corner {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      font-size: 11px;
+      color: #cfdbff;
+    }
+
+    .step,
+    .matrix-card,
+    .timeline-card {
+      background: linear-gradient(180deg, #ffffff, #f7f9ff);
+      box-shadow: 0 10px 22px rgba(23, 33, 63, 0.06);
+      color: var(--ink);
+    }
+    .step small,
+    .matrix-card small,
+    .timeline-card small { color: var(--muted); }
+    .step strong,
+    .matrix-card strong,
+    .timeline-card strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.28;
+    }
+    .step span,
+    .matrix-card span,
+    .timeline-card span {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.48;
+    }
+
+    .accent-blue { border-left: 5px solid var(--blue); }
+    .accent-green { border-left: 5px solid var(--green); }
+    .accent-amber { border-left: 5px solid var(--amber); }
+    .accent-rose { border-left: 5px solid var(--rose); }
+
+    .lane-title {
+      margin: 18px 0 12px;
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 800;
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .timeline-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .footer-card {
+      padding: 18px;
+      background: linear-gradient(180deg, #ffffff, #f6f9ff);
+    }
+    .footer-card h3 { margin: 0 0 10px; font-size: 18px; }
+    .footer-card ul { margin: 0 0 0 18px; padding: 0; }
+    .footer-card li { margin: 8px 0; line-height: 1.48; }
+    .callout {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #eef4ff;
+      border: 1px solid #d9e4ff;
+      color: #41527d;
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .mobile-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(12, 18, 34, 0.42);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+      z-index: 90;
+    }
     .mobile-sheet-backdrop.open {
       opacity: 1;
       pointer-events: auto;
     }
-
+    .mobile-sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      transform: translateY(102%);
+      transition: transform 0.22s ease;
+      z-index: 91;
+      background: linear-gradient(180deg, #ffffff, #f7f9ff);
+      border-radius: 22px 22px 0 0;
+      box-shadow: 0 -18px 40px rgba(0, 0, 0, 0.18);
+      padding: 10px 16px 18px;
+      max-height: 76vh;
+    }
+    .mobile-sheet.open { transform: translateY(0); }
     .mobile-sheet-handle {
-      width: 54px;
+      width: 48px;
       height: 5px;
       border-radius: 999px;
-      background: #CAD3E8;
-      margin: 10px auto 0;
+      background: #cfd8ef;
+      margin: 0 auto 10px;
     }
-
     .mobile-sheet-close {
       position: absolute;
       top: 10px;
       right: 12px;
       width: 34px;
       height: 34px;
-      border: 1px solid #D0D8EB;
+      border: 0;
       border-radius: 999px;
-      background: #FFFFFF;
-      color: #36476A;
-      font-size: 24px;
-      line-height: 1;
+      background: #edf2ff;
+      color: var(--ink);
+      font-size: 22px;
       cursor: pointer;
-      box-shadow: 0 6px 16px rgba(26,35,74,.08);
     }
-
     .mobile-sheet-content {
-      padding: 10px 16px 18px;
       overflow: auto;
-      max-height: calc(78vh - 24px);
+      max-height: calc(76vh - 36px);
+      padding-right: 2px;
     }
-
-    .mobile-sheet-content h3 {
-      margin: 4px 36px 10px 0;
-      color: #1A234A;
-      font-size: 20px;
-      line-height: 1.15;
-      letter-spacing: -.02em;
-    }
-
+    .mobile-sheet h3 { margin: 8px 0 8px; }
     .mobile-sheet-body {
-      color: #5A6683;
+      color: var(--muted);
+      line-height: 1.58;
       font-size: 14px;
-      line-height: 1.65;
     }
-
     .mobile-sheet-tags {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 14px;
+      margin-top: 12px;
     }
-
     .mobile-sheet-tag {
-      padding: 7px 10px;
+      padding: 6px 10px;
       border-radius: 999px;
-      border: 1px solid #C8D2E9;
-      background: #FFFFFF;
-      color: #5A6683;
+      background: #fff;
+      border: 1px solid var(--line-2);
       font-size: 11px;
       font-weight: 700;
-      box-shadow: 0 4px 10px rgba(26,35,74,.04);
+      color: var(--muted);
     }
 
-    body.sheet-open {
-      overflow: hidden;
-      touch-action: none;
+    .tap-hint {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #f1f5ff;
+      border-radius: 999px;
+      font-size: 10px;
+      padding: 4px 8px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      pointer-events: none;
+    }
+    .step .tap-hint,
+    .matrix-card .tap-hint,
+    .timeline-card .tap-hint {
+      color: var(--muted);
+      border-color: var(--line-2);
+      background: #fff;
+    }
+
+    @media (max-width: 1280px) {
+      .flow-grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .flow-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .column::after { display: none; }
     }
 
     @media (max-width: 1120px) {
-      .inspector {
-        display: none !important;
-      }
-      .content-grid {
-        grid-template-columns: 1fr !important;
-      }
+      .hero,
+      .content-grid,
+      .footer-grid,
+      .matrix-grid,
+      .timeline-grid,
+      .meta-grid { grid-template-columns: 1fr; }
+      .inspector { display: none; }
+      .app { padding: 18px 14px 44px; }
+      .hero-card h1 { font-size: 34px; }
+      .diagram-panel { min-height: auto; }
+      .flow-grid-5,
+      .flow-grid-4,
+      .flow-grid-3 { grid-template-columns: 1fr; }
+      .column { min-height: auto; }
     }
 
     @media (max-width: 760px) {
-      .node .tap-hint, .step .tap-hint, .path-step .tap-hint, .matrix-card .tap-hint {
-        display: inline-flex;
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        padding: 5px 8px;
-        border-radius: 999px;
-        background: rgba(255,255,255,.10);
-        color: rgba(246,248,255,.84);
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: .02em;
-        border: 1px solid rgba(255,255,255,.08);
-        box-shadow: 0 6px 14px rgba(0,0,0,.10);
-        z-index: 2;
+      .hero-card,
+      .meta-card,
+      .shell,
+      .diagram-panel,
+      .footer-card { border-radius: 16px; }
+      .hero-card h1 { font-size: 29px; }
+      .tab {
+        width: 100%;
+        text-align: left;
+        justify-content: flex-start;
       }
+      .topbar { align-items: stretch; }
+    }
+  </style>
 
-      .matrix-card .tap-hint {
-        background: rgba(26,35,74,.06);
-        color: #4F5878;
-        border-color: #D2D9EA;
-        box-shadow: 0 6px 14px rgba(26,35,74,.04);
-      }
+  <style id="professional-layout-stabilizer">
+    :root{
+      --node-top-pad: 16px;
+      --node-side-pad: 16px;
+      --meta-pill-bg: rgba(255,255,255,.10);
+      --meta-pill-border: rgba(255,255,255,.15);
+    }
 
-      .mobile-sheet {
-        left: 8px;
-        right: 8px;
-        bottom: 8px;
-        border-radius: 18px;
-      }
+    .app{padding-top:34px !important;}
+    .top-bar{margin-bottom:18px !important;}
+    .tabs{gap:12px !important;}
+    .tab{
+      position:relative;
+      z-index:5;
+      min-height:42px;
+      padding:0 18px;
+      font-size:13px;
+      line-height:1.15;
+      box-shadow:0 8px 18px rgba(28,52,84,.07);
+    }
 
-      .mobile-sheet-content {
-        padding: 8px 14px 16px;
-      }
+    .node,
+    .step,
+    .path-step,
+    .matrix-card{
+      overflow:hidden !important;
+      word-break:normal !important;
+      overflow-wrap:break-word;
+      hyphens:none;
+    }
 
-      .mobile-sheet-content h3 {
-        font-size: 18px;
-      }
+    .node{
+      padding:var(--node-top-pad) var(--node-side-pad) 15px !important;
+      min-height:192px;
+    }
+    .step{
+      padding:14px 14px 14px !important;
+      min-height:148px;
+    }
+    .path-step{
+      padding:14px 14px 14px !important;
+      min-height:118px;
+    }
+    .matrix-card{
+      padding:15px 15px 15px !important;
+      min-height:186px;
+    }
 
-      .mobile-sheet-body {
-        font-size: 14px;
+    .node small,
+    .step small,
+    .path-step small,
+    .matrix-card small{
+      display:block;
+      margin:0 0 10px 0 !important;
+      line-height:1.2 !important;
+      font-weight:700 !important;
+      letter-spacing:.08em;
+    }
+
+    .node small{padding-right:82px !important;}
+    .step small,
+    .path-step small,
+    .matrix-card small{padding-right:0 !important;}
+
+    .node strong,
+    .step strong,
+    .path-step strong,
+    .matrix-card strong{
+      display:block;
+      margin:0 !important;
+      line-height:1.18 !important;
+      letter-spacing:-.012em;
+      text-wrap:balance;
+    }
+
+    .node strong{
+      padding-right:0 !important;
+      max-width:100%;
+      font-size:15px !important;
+    }
+    .step strong,
+    .path-step strong,
+    .matrix-card strong{
+      padding-right:0 !important;
+    }
+
+    .node span,
+    .step span,
+    .path-step span,
+    .matrix-card span{
+      display:block;
+      margin-top:10px !important;
+      padding-right:0 !important;
+      line-height:1.52 !important;
+    }
+
+    .node .corner{
+      position:absolute !important;
+      top:12px !important;
+      right:12px !important;
+      display:inline-flex !important;
+      align-items:center;
+      justify-content:center;
+      min-width:40px;
+      max-width:92px;
+      padding:5px 8px;
+      border-radius:999px;
+      background:var(--meta-pill-bg);
+      border:1px solid var(--meta-pill-border);
+      color:rgba(246,248,255,.94) !important;
+      font-size:10px !important;
+      line-height:1 !important;
+      font-weight:800 !important;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      text-align:center;
+      box-shadow:0 6px 16px rgba(0,0,0,.12);
+      white-space:nowrap;
+      pointer-events:none;
+    }
+
+    .column{padding:16px !important;}
+    .col-head{margin-bottom:14px !important; padding-bottom:12px !important;}
+    .col-head h3{line-height:1.14; letter-spacing:-.015em;}
+    .diagram-title p{max-width:72ch; line-height:1.55;}
+
+    @media (min-width:761px){
+      .node .tap-hint,
+      .step .tap-hint,
+      .path-step .tap-hint,
+      .matrix-card .tap-hint{display:none !important;}
+    }
+
+    @media (min-width:1121px){
+      .flow-grid-5,.flow-grid-6{gap:16px !important;}
+      .column{min-height:650px;}
+      .node{min-height:198px;}
+      #tab-overview .column:nth-child(1) .node:nth-child(2){min-height:196px;}
+      #tab-overview .column:nth-child(2) .node:nth-child(2),
+      #tab-overview .column:nth-child(2) .node:nth-child(3),
+      #tab-overview .column:nth-child(4) .node:nth-child(2),
+      #tab-overview .column:nth-child(6) .node:nth-child(2){min-height:204px;}
+      #tab-engine .column:nth-child(2) .node:nth-child(2),
+      #tab-engine .column:nth-child(3) .node:nth-child(2),
+      #tab-engine .column:nth-child(5) .node:nth-child(2){min-height:202px;}
+    }
+
+    @media (max-width:1120px){
+      .app{padding-top:22px !important;}
+      .node,.step,.path-step,.matrix-card{min-height:auto !important;}
+      .node small{padding-right:72px !important;}
+    }
+
+    @media (max-width:760px){
+      .app{padding-top:16px !important;}
+      .tabs{grid-template-columns:1fr 1fr !important;}
+      .tab{min-height:48px;}
+      .node small{padding-right:0 !important;}
+      .node .corner{
+        position:static !important;
+        display:inline-flex !important;
+        margin:10px 0 0 0 !important;
+        white-space:normal;
       }
     }
 
-    @media (min-width: 1121px) {
-      .mobile-sheet,
-      .mobile-sheet-backdrop {
-        display: none !important;
-      }
+    @media (max-width:480px){
+      .tabs{grid-template-columns:1fr !important;}
     }
   </style>
 
@@ -755,538 +778,586 @@
   <div class="app">
     <section class="hero">
       <div class="hero-card">
-        <h1>Zach Dudek's Autonomous Workflow Orchestration Architecture</h1>
+        <h1>Autonomous Workflow Architecture</h1>
         <p>
-          Interactive, multi-view architecture explorer for the current Autonomous Workflow project:
-          FastAPI application layer, Redis-backed job state, direct file-ingest execution path,
-          OpenAI + Anthropic Claude orchestration, judge-driven decisioning, continuation handling,
-          stitching, and artifact generation.
+          This diagram reflects the current deployed shape of the system based on the live <strong>app.py</strong>,
+          <strong>autonomous_compare_runner.py</strong>, <strong>index.html</strong>, and the workflow evolution captured across this project.
+          It shows the real request path, Redis-backed job state, parallel model execution, judge-driven follow-up logic,
+          stitching, artifact generation, and the dashboard behaviors that your team will actually encounter.
         </p>
-        <div class="pills">
-          <div class="pill">Neutral dark enterprise theme</div>
-          <div class="pill">Single-file tabbed explorer</div>
-          <div class="pill">Explicit vendor names</div>
-          <div class="pill">Repo-current architecture</div>
-          <div class="pill">Interactive click-to-inspect nodes</div>
+        <div class="pill-row">
+          <div class="pill"><span class="dot"></span>FastAPI + background thread jobs</div>
+          <div class="pill"><span class="dot" style="background: var(--green)"></span>Redis-backed status model</div>
+          <div class="pill"><span class="dot" style="background: var(--amber)"></span>OpenAI + Claude parallel orchestration</div>
+          <div class="pill"><span class="dot" style="background: var(--rose)"></span>Judge, follow-up, continuation, stitch</div>
         </div>
       </div>
       <div class="meta-card">
         <div class="meta-grid">
-          <div class="stat"><div class="k">Primary backend</div><div class="v">FastAPI</div></div>
-          <div class="stat"><div class="k">State store</div><div class="v">Redis</div></div>
-          <div class="stat"><div class="k">Execution models</div><div class="v">OpenAI + Claude</div></div>
-          <div class="stat"><div class="k">Artifact outputs</div><div class="v">HTML + JSON</div></div>
+          <div class="stat">
+            <div class="k">Primary app layer</div>
+            <div class="v">FastAPI API + static UI</div>
+          </div>
+          <div class="stat">
+            <div class="k">Execution pattern</div>
+            <div class="v">Queued job → in-process worker thread</div>
+          </div>
+          <div class="stat">
+            <div class="k">State persistence</div>
+            <div class="v">Redis job document</div>
+          </div>
+          <div class="stat">
+            <div class="k">Artifacts</div>
+            <div class="v">HTML + JSON outputs</div>
+          </div>
         </div>
         <div class="meta-note">
-          This version is intentionally comprehensive. It reflects the current repo structure and also flags what does
-          <strong>not</strong> appear to be present yet, such as auth, dedicated worker separation, binary parsing, deployment manifests,
-          observability stack, and persistent run history outside Redis/job snapshots.
+          Important current-state nuance: the dashboard exposes an <strong>Artifacts: On/Off</strong> control, but the runner still saves artifacts unconditionally.
+          That is represented here as a real UI control with incomplete backend enforcement.
         </div>
       </div>
     </section>
 
-    <div class="top-bar">
-      <div class="tabs">
-        <button class="tab active" data-tab="overview">1. System Overview</button>
-        <button class="tab" data-tab="lifecycle">2. Request Lifecycle</button>
-        <button class="tab" data-tab="orchestration">3. Model Orchestration</button>
-        <button class="tab" data-tab="deployment">4. State, Hosting & Repo Gaps</button>
-      </div>
-      <div class="top-right">
+    <section class="shell">
+      <div class="topbar">
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="overview">System Overview</button>
+          <button type="button" class="tab" data-tab="api">API + Job State</button>
+          <button type="button" class="tab" data-tab="engine">Orchestration Engine</button>
+          <button type="button" class="tab" data-tab="ui">Dashboard + Deliverables</button>
+        </div>
         <div class="legend">
-          <div class="legend-item"><span class="dot" style="background:#67a3ff"></span> Interface / API</div>
-          <div class="legend-item"><span class="dot" style="background:#4fd1c5"></span> Execution / model logic</div>
-          <div class="legend-item"><span class="dot" style="background:#f6c177"></span> Decision / control</div>
-          <div class="legend-item"><span class="dot" style="background:#f38ba8"></span> Output / persistence</div>
+          <div class="legend-item"><span class="dot" style="background: var(--blue)"></span>Live implementation</div>
+          <div class="legend-item"><span class="dot" style="background: var(--green)"></span>Persistent state / outputs</div>
+          <div class="legend-item"><span class="dot" style="background: var(--amber)"></span>Decision or control logic</div>
+          <div class="legend-item"><span class="dot" style="background: var(--rose)"></span>Current caveat / important nuance</div>
         </div>
       </div>
-    </div>
 
-    <section class="tab-shell">
       <div class="content-grid">
         <div>
-          <div class="diagram-panel tab-panel js-measure-panel" id="tab-overview">
-            <div class="diagram-title">
-              <div>
-                <h2>System Overview</h2>
-                <p>Layered end-to-end view from user interaction through orchestration, state, and artifact delivery.</p>
-              </div>
-            </div>
-
-            <div class="flow-grid-6">
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Layer 1</div>
-                  <h3>User & UI</h3>
-                </div>
-                <div class="node accent-blue" data-title="Custom HTML frontend" data-body="The current browser UI is a standalone HTML application that lets the user enter a prompt, choose max iterations, attach files, and review status, logs, artifacts, summary, and full output. It renders selected files client-side and posts FormData to the backend." data-tags="UI,HTML,Client,Prompt entry">
-                  <small>Interface</small><strong>Custom HTML frontend</strong>
-                  <span>Prompt entry, file attach, run trigger, result display.</span>
-                  <div class="corner">UI</div><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-blue" data-title="Solution consultant interaction model" data-body="This repo implies a self-serve workflow for consultants and technical stakeholders: enter a business task, optionally attach materials, run the workflow, inspect comparative output and artifacts, then reuse/share the results." data-tags="Users,SCs,Stakeholders">
-                  <small>Audience</small><strong>Solution consultant interaction model</strong>
-                  <span>Self-serve, repeatable internal workflow.</span>
+          <section id="tab-overview" class="tab-panel">
+            <div class="diagram-panel">
+              <div class="diagram-title">
+                <div>
+                  <h2>End-to-end system shape</h2>
+                  <p>
+                    This view is the simplest truthful story: browser dashboard → FastAPI endpoints → Redis job document → autonomous runner → provider calls → artifacts + live polling.
+                  </p>
                 </div>
               </div>
 
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Layer 2</div>
-                  <h3>FastAPI App Layer</h3>
-                </div>
-                <div class="node accent-violet" data-title="FastAPI routes" data-body="The backend serves the UI at /, exposes /health, accepts queued jobs at /run, returns job status at /status/{job_id}, accepts direct multipart execution at /run-with-files, and mounts /outputs for generated artifacts." data-tags="FastAPI,/run,/run-with-files,/status,/outputs">
-                  <small>Backend</small><strong>FastAPI routes</strong>
-                  <span>/, /health, /run, /status/{job_id}, /run-with-files, /outputs.</span>
-                  <div class="corner">API</div>
-                </div>
-                <div class="node accent-violet" data-title="Direct execution path" data-body="The browser UI currently calls /run-with-files directly. That endpoint reads uploaded files, decodes text where possible, injects a structured attached-files context block into the prompt, and invokes the orchestration runner synchronously for the response payload." data-tags="Current UX,FormData,Direct path">
-                  <small>Current path</small><strong>Direct execution path</strong>
-                  <span>UI → /run-with-files → runner → immediate response JSON.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-violet" data-title="Queued job path" data-body="The app also supports a background style path via /run. It creates a job, persists it in Redis, spawns a thread to process it, and lets consumers poll /status/{job_id}. This is important architecturally even though the current UI does not appear to use it yet." data-tags="Queued jobs,Background thread,Polling">
-                  <small>Async-capable path</small><strong>Queued job path</strong>
-                  <span>Create job, persist state, spawn worker thread, poll status.</span>
-                </div>
-              </div>
-
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Layer 3</div>
-                  <h3>Prompt Engineering</h3>
-                </div>
-                <div class="node accent-cyan" data-title="Attachment context injection" data-body="Uploaded files are read server-side. Text files are decoded as UTF-8 or Latin-1, otherwise marked unsupported. Up to 20,000 characters per file are appended into a structured ATTACHED FILES CONTEXT block that becomes part of the final prompt sent into orchestration." data-tags="Files,Context injection,Prompt packaging">
-                  <small>Pre-processing</small><strong>Attachment context injection</strong>
-                  <span>Repo-supported grounding from uploaded text content.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-cyan" data-title="Prompt optimizer layer" data-body="The orchestration engine includes a prompt optimization stage that can run through OpenAI, Claude, or compare both. It evaluates prompts for clarity, specificity, structure, efficiency, and creativity control, then selects an optimized active prompt." data-tags="Optimizer,OpenAI,Claude,compare_both">
-                  <small>Pre-model intelligence</small><strong>Prompt optimizer layer</strong>
-                  <span>Single-provider or compare_both optimization strategies.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-cyan" data-title="Current optimizer reality" data-body="There is also an important current-state caveat: both the backend app and runner include debug flags that force the optimizer off. Architecturally the layer exists and is substantial, but operationally it may currently be disabled while debugging." data-tags="Current-state caveat,FORCE_DISABLE_OPTIMIZER">
-                  <small>Reality check</small><strong>Optimizer currently appears forced off</strong>
-                  <span>Designed in; possibly disabled in practice.</span>
-                </div>
-              </div>
-
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Layer 4</div>
-                  <h3>Parallel Model Execution</h3>
-                </div>
-                <div class="node accent-green" data-title="OpenAI execution path" data-body="OpenAI is called via the Responses API. The initial call stores output_text plus response_id. Follow-up turns can continue the conversation using previous_response_id, enabling continuation handling and iterative refinement." data-tags="OpenAI,Responses API,previous_response_id">
-                  <small>Provider path A</small><strong>OpenAI execution path</strong>
-                  <span>Initial + follow-up conversation state support.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-green" data-title="Anthropic Claude execution path" data-body="Claude is called through anthropic.messages.create with a rolling messages array. The orchestration stores assistant text and preserves conversation state for follow-up and continuation handling." data-tags="Claude,Anthropic,messages API">
-                  <small>Provider path B</small><strong>Claude execution path</strong>
-                  <span>Parallel peer path to OpenAI with retained chat state.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-green" data-title="Parallelism" data-body="OpenAI and Claude initial calls run in parallel through a ThreadPoolExecutor with max_workers=2. The judge only executes after both results return, making parallelism a central runtime characteristic of the design." data-tags="Parallelism,ThreadPoolExecutor,Latency">
-                  <small>Runtime behavior</small><strong>Parallel execution</strong>
-                  <span>Both model paths run simultaneously before judging.</span>
-                </div>
-              </div>
-
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Layer 5</div>
-                  <h3>Judge & Control Loop</h3>
-                </div>
-                <div class="node accent-amber" data-title="Judge model" data-body="A structured judge step scores OpenAI and Claude across clarity, completeness, practical usefulness, tone appropriateness, and overall strength. It chooses a winner and a next action: accept, revise_prompt_and_rerun, or follow_up_on_winner." data-tags="Judge,Scorecard,Decision schema">
-                  <small>Decisioning</small><strong>Judge model</strong>
-                  <span>Structured scoring and action selection.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-amber" data-title="Continuation handling" data-body="If the winning path is incomplete, the system issues follow-up prompts to the chosen provider. It can continue multiple times until the answer appears complete or the continuation attempt ceiling is hit." data-tags="Continuation,Completion,Follow-up">
-                  <small>Refinement</small><strong>Continuation handling</strong>
-                  <span>Protects against cut-off or partial responses.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-amber" data-title="Stitching" data-body="If a provider answer required a continuation, the system can run a stitching pass that merges the original answer and the continuation into a single cleaned final output, removing duplication and cut-off fragments." data-tags="Stitching,Cleanup,Final response">
-                  <small>Finalization</small><strong>Stitching pass</strong>
-                  <span>Produces one polished answer instead of fragments.</span>
-                </div>
-              </div>
-
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Layer 6</div>
-                  <h3>State, Artifacts & Delivery</h3>
-                </div>
-                <div class="node accent-rose" data-title="Redis-backed job state" data-body="The queued path persists job state in Redis. Each job tracks status, stage, request details, model result states, artifacts, final output, and errors. /status/{job_id} returns that live job object." data-tags="Redis,Job status,Polling">
-                  <small>Persistence</small><strong>Redis-backed job state</strong>
-                  <span>Queued workflow state, staged results, artifact pointers.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-rose" data-title="Artifact generation" data-body="After orchestration completes, the runner saves both HTML and JSON outputs into an outputs directory. The FastAPI app mounts /outputs as static files, making artifacts directly retrievable from the hosted app." data-tags="Artifacts,HTML,JSON,/outputs">
-                  <small>Output</small><strong>Artifact generation</strong>
-                  <span>Saved run reports plus machine-readable execution record.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-rose" data-title="Traceable final payload" data-body="The direct execution path returns status, summary, full_output, artifact links, logs, runtime_seconds, and error details. That makes the UI both an execution console and a result review surface." data-tags="Result payload,Logs,Runtime">
-                  <small>Delivery</small><strong>Traceable final payload</strong>
-                  <span>Outcome, logs, runtime, and artifact links in one response.</span><div class="tap-hint">Tap for details</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="diagram-panel tab-panel hidden js-measure-panel" id="tab-lifecycle">
-            <div class="diagram-title">
-              <div>
-                <h2>Request Lifecycle</h2>
-                <p>The repo currently supports two request patterns: direct execution from the UI, and queued/background-style processing with job polling.</p>
-              </div>
-            </div>
-
-            <div class="lane-wrap">
-              <div class="lane">
-                <h3>Current browser path used by the UI</h3>
-                <div class="chips">
-                  <div class="chip">UI posts FormData</div>
-                  <div class="chip">/run-with-files</div>
-                  <div class="chip">Immediate JSON response</div>
-                  <div class="chip">Artifacts linked in payload</div>
-                </div>
-
-                <div class="h-flow">
-                  <div class="step" data-title="1. Prompt + files entered" data-body="The user enters a prompt, chooses max iterations, optionally uploads multiple files, and clicks Run workflow from the custom HTML UI." data-tags="UI,Input">
-                    <small>Step 1</small><strong>Prompt + files entered</strong><span>User prepares the request in-browser.</span><div class="tap-hint">Tap for details</div>
+              <div class="flow-grid-5">
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">01 · User surface</div>
+                    <h3>Browser dashboard</h3>
                   </div>
-                  <div class="step" data-title="2. FormData sent to /run-with-files" data-body="The UI packages prompt, max_iterations, user_id, and files into multipart FormData and POSTs to /run-with-files." data-tags="FormData,/run-with-files">
-                    <small>Step 2</small><strong>POST /run-with-files</strong><span>Browser sends one combined request.</span><div class="tap-hint">Tap for details</div>
+
+                  <div class="node" data-title="Dashboard UI" data-body="The index.html file is the operator control surface. It lets the user enter prompts, set max iterations, toggle optimizer and artifact options, launch a run, poll live status, inspect logs, compare model outputs, and open generated artifacts." data-tags="Frontend, index.html, Operator experience, Polling UI">
+                    <small>Client</small>
+                    <strong>Interactive run console</strong>
+                    <span>Prompt entry, run controls, progress, logs, comparison, artifacts.</span>
+                    <div class="corner">index.html</div>
                   </div>
-                  <div class="step" data-title="3. Files decoded and injected" data-body="The backend reads each uploaded file, attempts text decoding, builds structured file payloads, and appends them to the prompt as ATTACHED FILES CONTEXT." data-tags="Decode,Context injection">
-                    <small>Step 3</small><strong>Decode + inject context</strong><span>Supporting materials become prompt context.</span><div class="tap-hint">Tap for details</div>
+
+                  <div class="node" data-title="Dashboard state model" data-body="The frontend stores a current job id, starts a workflow with POST /run, and then polls GET /status/{job_id} every two seconds until the job reaches a terminal state. The UI renders tracker steps, summary cards, hero output, judge reasoning, logs, raw payload, and artifact links from that job document." data-tags="Polling, Job ID, Status rendering, Frontend state">
+                    <small>Interaction pattern</small>
+                    <strong>Run once, then poll</strong>
+                    <span>No websocket layer yet. Live updates come from repeated status fetches.</span>
+                    <div class="corner">2s polling</div>
                   </div>
-                  <div class="step" data-title="4. run_autonomous_compare invoked" data-body="The app invokes run_autonomous_compare directly with the combined prompt, user_id, max_iterations, and built runner options." data-tags="Runner,Execution">
-                    <small>Step 4</small><strong>Invoke orchestration runner</strong><span>Direct request/response execution path.</span><div class="tap-hint">Tap for details</div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">02 · API gateway</div>
+                    <h3>FastAPI app</h3>
                   </div>
-                  <div class="step" data-title="5. Orchestration completes" data-body="The runner executes optimization logic, parallel model calls, judging, follow-up or stitching as needed, final output extraction, and output saving." data-tags="Orchestration,Judge,Stitching">
-                    <small>Step 5</small><strong>Complete orchestration</strong><span>Models, judge, and finalization run.</span><div class="tap-hint">Tap for details</div>
+
+                  <div class="node" data-title="Serve static UI and outputs" data-body="FastAPI serves the dashboard at root, returns a simple health endpoint, exposes /status/{job_id}, accepts /run requests, supports a synchronous /run-with-files route for uploaded text files, and mounts /outputs as a static path for generated deliverables." data-tags="FastAPI, StaticFiles, HTMLResponse, Output hosting">
+                    <small>Transport</small>
+                    <strong>HTTP API + static file host</strong>
+                    <span>One app handles control-plane requests and generated-file delivery.</span>
+                    <div class="corner">app.py</div>
                   </div>
-                  <div class="step" data-title="6. HTML/JSON artifacts written" data-body="The runner writes HTML and JSON artifact files into outputs and returns their relative paths." data-tags="Artifacts,outputs">
-                    <small>Step 6</small><strong>Save outputs</strong><span>Run report and execution JSON are generated.</span><div class="tap-hint">Tap for details</div>
+
+                  <div class="node" data-title="Background execution pattern" data-body="The /run route creates a job document, returns a job id immediately, and starts process_job(job_id) in a daemon thread. This means job execution is asynchronous from the browser’s perspective but still handled in-process inside the API container." data-tags="Async UX, Background thread, In-process worker">
+                    <small>Execution model</small>
+                    <strong>Queued response, threaded worker</strong>
+                    <span>Simple and effective, but not yet split into a separate worker tier.</span>
+                    <div class="corner">threading.Thread</div>
                   </div>
-                  <div class="step" data-title="7. UI renders result" data-body="The UI receives summary, full_output, runtime, logs, and artifact links, then renders them in the latest response panel." data-tags="UI render,Results">
-                    <small>Step 7</small><strong>Render result in UI</strong><span>Single response refreshes the screen.</span>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">03 · Persistent run state</div>
+                    <h3>Redis job document</h3>
+                  </div>
+
+                  <div class="node" data-title="Redis-backed job object" data-body="Each run is stored as a JSON job document in Redis keyed by job:{job_id}. The document tracks request metadata, stage, percent progress, per-step status, iteration history, outputs, summary, artifacts, logs, errors, display helpers, and total runtime." data-tags="Redis, Job persistence, Status payload, Operational state">
+                    <small>State store</small>
+                    <strong>Single source of truth for run status</strong>
+                    <span>The UI renders almost entirely from this one evolving JSON structure.</span>
+                    <div class="corner">job:{id}</div>
+                  </div>
+
+                  <div class="node" data-title="Status callback contract" data-body="The runner emits structured events such as log, stage, step_started, step_completed, step_failed, step_skipped, output, summary, and iteration. app.py translates those events into updates on the Redis job document so the frontend can see progress in near real time." data-tags="Event model, Status callback, Job hydration">
+                    <small>Translation layer</small>
+                    <strong>Runner events hydrate UI state</strong>
+                    <span>Loose event contract keeps runner logic separate from API persistence logic.</span>
+                    <div class="corner">status_callback</div>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">04 · AI workflow core</div>
+                    <h3>Autonomous runner</h3>
+                  </div>
+
+                  <div class="node" data-title="Runner wrapper" data-body="run_autonomous_compare is the top-level orchestration wrapper. It validates input, logs run settings, calls run_autonomous_loop, extracts the final output, saves HTML and JSON artifacts, emits summary/output events, and returns a structured result payload." data-tags="Wrapper, Orchestration, Final packaging, Result payload">
+                    <small>Core engine</small>
+                    <strong>Multi-step workflow controller</strong>
+                    <span>Prompt optimizer, model run, judge, follow-up, stitch, artifacts.</span>
+                    <div class="corner">autonomous_compare_runner.py</div>
+                  </div>
+
+                  <div class="node" data-title="Parallel provider execution" data-body="Within each iteration, OpenAI and Claude are executed in parallel via ThreadPoolExecutor. That is true both for the main model race and, when compare_both is selected, for the prompt optimizer race as well." data-tags="Parallelism, ThreadPoolExecutor, OpenAI, Claude">
+                    <small>Performance / comparison</small>
+                    <strong>Head-to-head execution lanes</strong>
+                    <span>The architecture is intentionally comparative, not single-model linear.</span>
+                    <div class="corner">parallel</div>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">05 · Outputs</div>
+                    <h3>Artifacts + inspection</h3>
+                  </div>
+
+                  <div class="node" data-title="Generated deliverables" data-body="At completion, the runner writes two artifacts into outputs/: an HTML report and a JSON payload. app.py then records those relative paths into the job document and the frontend renders them as clickable artifact links." data-tags="Artifacts, HTML report, JSON output, Static hosting">
+                    <small>Deliverable layer</small>
+                    <strong>HTML + JSON output package</strong>
+                    <span>Human-readable report plus machine-readable run record.</span>
+                    <div class="corner">/outputs</div>
+                  </div>
+
+                  <div class="node" data-title="Operational transparency" data-body="The final operator experience includes stage progress, execution tracker, summary cards, winner output, decision rationale, provider comparison, logs, raw payload inspection, and artifact opening. This is more than a simple prompt box; it is a lightweight observability surface for the workflow." data-tags="Transparency, Auditability, Operator trust, Demo-ready UI">
+                    <small>Experience</small>
+                    <strong>Explainable workflow output</strong>
+                    <span>The product already exposes enough internals to support team rollout and walkthroughs.</span>
+                    <div class="corner">observability</div>
                   </div>
                 </div>
               </div>
 
-              <div class="lane">
-                <h3>Queued/background-capable path present in the app</h3>
-                <div class="chips">
-                  <div class="chip">/run</div>
-                  <div class="chip">job_id returned immediately</div>
-                  <div class="chip">Redis persistence</div>
-                  <div class="chip">/status polling</div>
+              <div class="footer-grid">
+                <div class="footer-card">
+                  <h3>What is already architecturally strong</h3>
+                  <ul>
+                    <li>Clean separation between UI, API/state handling, and orchestration logic.</li>
+                    <li>Redis gives the workflow a durable status surface instead of ephemeral console-only logs.</li>
+                    <li>Parallel provider execution and iterative judging make the system meaningfully autonomous.</li>
+                    <li>Generated artifacts make every run portable and reviewable after execution.</li>
+                  </ul>
                 </div>
+                <div class="footer-card">
+                  <h3>What is still intentionally lightweight</h3>
+                  <ul>
+                    <li>Worker execution still lives inside the API process rather than a dedicated job/queue tier.</li>
+                    <li>Status delivery uses polling instead of streaming or websockets.</li>
+                    <li>Uploaded files are text-decoded and appended to the prompt rather than deeply parsed.</li>
+                    <li>UI controls are slightly ahead of backend enforcement in at least one area: artifact toggling.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
 
-                <div class="two-paths">
-                  <div class="path-card">
-                    <h4>Submission & processing</h4>
-                    <div class="path-stack">
-                      <div class="path-step" data-title="Queued submission" data-body="/run accepts a JSON RunRequest containing prompt, max_iterations, user_id, and optional options." data-tags="/run,RunRequest">
-                        <small>Submission</small><strong>POST /run</strong><span>JSON-based queued submission path.</span>
-                      </div>
-                      <div class="connector-line"></div>
-                      <div class="path-step" data-title="Job object created" data-body="create_job generates a UUID job_id and stores request, result placeholders, artifact placeholders, status, stage, timestamps, and errors in Redis." data-tags="UUID,Redis,Job schema">
-                        <small>State init</small><strong>Create job record</strong><span>Persist request + empty result structure.</span>
-                      </div>
-                      <div class="connector-line"></div>
-                      <div class="path-step" data-title="Background thread begins" data-body="A daemon thread is started with process_job(job_id), which updates stages, invokes the orchestration runner, extracts artifacts, maps logs to job stage transitions, and saves final state." data-tags="Thread,process_job">
-                        <small>Worker</small><strong>Spawn process_job thread</strong><span>Background processing starts immediately.</span>
-                      </div>
-                    </div>
+          <section id="tab-api" class="tab-panel hidden">
+            <div class="diagram-panel">
+              <div class="diagram-title">
+                <div>
+                  <h2>API + job state lifecycle</h2>
+                  <p>
+                    This tab breaks down the control-plane behavior the user experiences from launch to completion.
+                  </p>
+                </div>
+              </div>
+
+              <div class="lane-title">Request lifecycle</div>
+              <div class="flow-grid-4">
+                <div class="step accent-blue" data-title="POST /run" data-body="The standard dashboard path sends prompt, max_iterations, user_id, and options to POST /run. The API cleans and merges options, creates a Redis job document, starts a background thread, and returns a job id plus queued status immediately." data-tags="POST /run, Async start, Job creation, Browser launch">
+                  <small>1 · Entry</small>
+                  <strong>Run request accepted</strong>
+                  <span>Fast response to browser; heavy work continues out of band.</span>
+                </div>
+                <div class="step accent-green" data-title="Create job document" data-body="build_job_document seeds a rich initial payload with request info, progress, named steps, iteration container, summary, outputs, artifact slots, timing, logs, errors, and display labels. This becomes the shared contract between backend and frontend." data-tags="Job schema, Redis payload, Display contract">
+                  <small>2 · State init</small>
+                  <strong>Redis job object seeded</strong>
+                  <span>Everything the UI needs already has a placeholder location.</span>
+                </div>
+                <div class="step accent-amber" data-title="process_job thread" data-body="The background thread loads the Redis job, marks it running, defines the status_callback translator, calls run_autonomous_compare, and then reconciles top-level outputs, artifacts, summary, terminal state, runtime, and failures back into the job document." data-tags="process_job, Background thread, Reconciliation">
+                  <small>3 · Worker start</small>
+                  <strong>In-process background execution</strong>
+                  <span>No external queue broker or worker service yet.</span>
+                </div>
+                <div class="step accent-blue" data-title="GET /status/{job_id}" data-body="The frontend polls this endpoint every two seconds. The route simply returns the current Redis job document, which means UI rendering and backend state stay loosely coupled and simple." data-tags="Polling, Status endpoint, Frontend contract">
+                  <small>4 · Feedback loop</small>
+                  <strong>Browser reads evolving job state</strong>
+                  <span>Near-real-time updates without websocket complexity.</span>
+                </div>
+              </div>
+
+              <div class="lane-title">Additional routes and variants</div>
+              <div class="matrix-grid">
+                <div class="matrix-card accent-blue" data-title="GET /" data-body="Serves the main index.html dashboard directly from disk. The app is both API server and UI host." data-tags="Root route, Static UI, Single service">
+                  <small>Serving</small>
+                  <strong>Main dashboard delivery</strong>
+                  <span>Simple deployment footprint: one service serves both interface and API.</span>
+                </div>
+                <div class="matrix-card accent-green" data-title="/outputs static mount" data-body="The outputs directory is mounted as a static path so generated HTML and JSON files can be opened from the browser. Artifact links therefore resolve without additional controller logic." data-tags="StaticFiles, Artifact hosting, Deliverable access">
+                  <small>Artifacts</small>
+                  <strong>Generated file delivery</strong>
+                  <span>Human review of run artifacts is built into the product path.</span>
+                </div>
+                <div class="matrix-card accent-amber" data-title="POST /run-with-files" data-body="This variant accepts uploaded files, tries UTF-8 then Latin-1 decode, truncates content to 20,000 characters per file, appends the file context to the prompt, and then runs the workflow synchronously before returning the result payload. It is useful, but operationally different from /run because it does not create a long-lived Redis job entry for polling." data-tags="File uploads, Synchronous variant, Text decode, Prompt append">
+                  <small>File-aware mode</small>
+                  <strong>Run with attached text context</strong>
+                  <span>Current implementation is prompt augmentation, not deep document understanding.</span>
+                </div>
+                <div class="matrix-card accent-rose" data-title="Current-state caveats" data-body="The architecture is truthful but lightweight. There is no separate worker fleet, queue, streaming event bus, or advanced file parser in the current code snapshot. That is not a flaw in the concept; it simply marks the next maturity layer." data-tags="Current state, Maturity roadmap, Architecture nuance">
+                  <small>Nuance</small>
+                  <strong>Lightweight platform assumptions</strong>
+                  <span>Good fit for iterative buildout, rollout, and learning.</span>
+                </div>
+              </div>
+
+              <div class="lane-title">Redis job payload anatomy</div>
+              <div class="timeline-grid">
+                <div class="timeline-card accent-blue" data-title="Request and progress fields" data-body="The job payload stores request.prompt, request.max_iterations, request.user_id, request.options, attached filenames, current stage, human-readable display labels, percent progress, and steps completed. This is what powers the top-level tracker and run status cards." data-tags="Request metadata, Progress, UI labels">
+                  <small>Control plane</small>
+                  <strong>Request + progress contract</strong>
+                  <span>Allows the dashboard to explain where a run is without re-deriving state.</span>
+                </div>
+                <div class="timeline-card accent-green" data-title="Named steps" data-body="The payload has explicit entries for optimizer, openai, claude, judge, follow_up, stitch, and artifacts. Each step tracks status, timestamps, latency, message, provider, model, attempts, error, and meta. That is why the UI can show a true execution tracker instead of vague generic progress." data-tags="Step model, Per-phase telemetry, Tracker UI">
+                  <small>Step detail</small>
+                  <strong>Rich execution breakdown</strong>
+                  <span>The architecture was designed to be inspectable, not just functional.</span>
+                </div>
+                <div class="timeline-card accent-amber" data-title="Outputs, summary, iteration history" data-body="The payload stores optimized prompt, provider outputs, judge output, follow-up output, stitched output, final output, summary labels, and iteration history records. This makes the run auditable after the fact and gives the frontend enough context to render comparisons and reasoning." data-tags="Outputs, Summary, Iteration history, Auditability">
+                  <small>Review layer</small>
+                  <strong>Explainable result structure</strong>
+                  <span>Not just the winning text, but the reasoning path that produced it.</span>
+                </div>
+                <div class="timeline-card accent-rose" data-title="Errors and terminal handling" data-body="Failures are recorded both at step level and top level. process_job also catches uncaught exceptions, stamps the current stage, stores failure metadata, and marks the job terminal so the browser stops polling cleanly." data-tags="Failures, Terminal state, Error hydration">
+                  <small>Resilience</small>
+                  <strong>Operational error transparency</strong>
+                  <span>Important for rollout because the operator can see what failed and where.</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="tab-engine" class="tab-panel hidden">
+            <div class="diagram-panel">
+              <div class="diagram-title">
+                <div>
+                  <h2>Autonomous orchestration engine</h2>
+                  <p>
+                    This is the internal decision engine that makes the system feel more like a workflow than a single API call.
+                  </p>
+                </div>
+              </div>
+
+              <div class="flow-grid-5">
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">A · Pre-run</div>
+                    <h3>Prompt preparation</h3>
                   </div>
 
-                  <div class="path-card">
-                    <h4>Observation & retrieval</h4>
-                    <div class="path-stack">
-                      <div class="path-step" data-title="Immediate acknowledgement" data-body="The caller receives job_id, queued status, and a success message right away instead of waiting for model calls to finish." data-tags="job_id,Immediate return">
-                        <small>Response</small><strong>Return job_id immediately</strong><span>Non-blocking submission experience.</span>
-                      </div>
-                      <div class="connector-line"></div>
-                      <div class="path-step" data-title="Status polling" data-body="/status/{job_id} fetches the Redis-backed job document. It can show queued, running, judging, completed, or failed state plus artifacts and final output once available." data-tags="/status,Polling,Redis">
-                        <small>Monitoring</small><strong>Poll /status/{job_id}</strong><span>Read live persisted job state.</span>
-                      </div>
-                      <div class="connector-line"></div>
-                      <div class="path-step" data-title="Artifacts retrieved" data-body="When processing is done, the final job state contains html_path and json_path under artifacts, and the files themselves are reachable via the /outputs static mount." data-tags="Artifacts,/outputs">
-                        <small>Outputs</small><strong>Fetch artifacts</strong><span>HTML/JSON reports available for download.</span>
-                      </div>
-                    </div>
+                  <div class="node" data-title="Prompt optimizer entry" data-body="optimize_prompt reads options and either skips optimization or runs one of three strategies: single_openai, single_claude, or compare_both. The compare_both strategy runs both optimizers in parallel and then asks OpenAI to select the stronger optimized prompt." data-tags="Prompt optimization, compare_both, single_openai, single_claude">
+                    <small>Preparation</small>
+                    <strong>Optional prompt improvement stage</strong>
+                    <span>The system can improve the prompt before the main race begins.</span>
+                    <div class="corner">configurable</div>
+                  </div>
+
+                  <div class="node" data-title="Optimizer result package" data-body="A PromptOptimizationResult stores original prompt, optimized prompt, explanation of changes, optional variants, selected provider, strategy, target model, use case, tone style, output format, and selection reason. The optimized prompt becomes the active prompt for the loop." data-tags="PromptOptimizationResult, Active prompt, Explainability">
+                    <small>Output</small>
+                    <strong>Optimization is inspectable, not hidden</strong>
+                    <span>The run artifacts preserve what changed and why.</span>
+                    <div class="corner">traceable</div>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">B · Main race</div>
+                    <h3>Parallel model execution</h3>
+                  </div>
+
+                  <div class="node" data-title="Initial iteration run" data-body="For each iteration, run_autonomous_loop sends the active prompt to OpenAI and Claude simultaneously using ThreadPoolExecutor. OpenAI tracks response_id in OpenAIChatState for later follow-up continuity; Claude maintains a message history inside ClaudeChatState." data-tags="Iteration, Parallel execution, OpenAI state, Claude state">
+                    <small>Iteration core</small>
+                    <strong>OpenAI vs Claude side-by-side</strong>
+                    <span>Both models are first-class participants in every decision cycle.</span>
+                    <div class="corner">executor</div>
+                  </div>
+
+                  <div class="node" data-title="Result capture" data-body="Each provider returns a ProviderResult with provider name, model, prompt, text, optional error, and optional response id. Those results are immediately emitted into the status stream so the job document can expose them to the dashboard." data-tags="ProviderResult, Output capture, Event emission">
+                    <small>Result model</small>
+                    <strong>Structured provider response objects</strong>
+                    <span>Text output and operational metadata travel together.</span>
+                    <div class="corner">ProviderResult</div>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">C · Judge layer</div>
+                    <h3>Decision logic</h3>
+                  </div>
+
+                  <div class="node" data-title="Judge decision object" data-body="The judge compares both provider outputs and returns a JudgeDecision containing winner, next_action, reason, revised_prompt, follow_up_prompt, rerun_target, confidence, and two scorecards. There is also a safe wrapper that can fall back if judging fails." data-tags="JudgeDecision, Scorecards, Winner selection, Confidence">
+                    <small>Evaluator</small>
+                    <strong>Scores and prescribes next action</strong>
+                    <span>This is the brain that decides whether the system stops, follows up, or reruns.</span>
+                    <div class="corner">judge</div>
+                  </div>
+
+                  <div class="node" data-title="Possible next actions" data-body="The code explicitly handles accept, revise_prompt_and_rerun, and follow_up_on_winner. There is also logic for rerun_target values like OpenAI, Claude, Both, and unexpected values. This is what makes the workflow adaptive instead of a one-shot compare." data-tags="accept, revise_prompt_and_rerun, follow_up_on_winner, Both">
+                    <small>Branching</small>
+                    <strong>Adaptive orchestration path</strong>
+                    <span>Each iteration can terminate, continue, or reshape the next loop.</span>
+                    <div class="corner">branching</div>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">D · Follow-up layer</div>
+                    <h3>Continuation + completion</h3>
+                  </div>
+
+                  <div class="node" data-title="Follow-up on winner" data-body="When the judge chooses follow_up_on_winner, the system targets the selected provider with a sanitized follow-up prompt. If rerun_target is None, it falls back to the winner. If rerun_target is Both, the system skips direct follow-up and uses a revised prompt for the next loop." data-tags="Follow-up, Winner continuation, Sanitized prompt">
+                    <small>Deepening stage</small>
+                    <strong>Winning provider continues the answer</strong>
+                    <span>The system can extend a strong answer rather than throw it away.</span>
+                    <div class="corner">continuation</div>
+                  </div>
+
+                  <div class="node" data-title="Incomplete output handling" data-body="After a follow-up, the system checks looks_incomplete and can attempt multiple continuation passes up to MAX_CONTINUATION_ATTEMPTS. This guards against truncated or unfinished outputs and is one of the more important practical robustness patterns in the code." data-tags="looks_incomplete, Continuation attempts, Robustness">
+                    <small>Practical resilience</small>
+                    <strong>Multi-pass completion safeguard</strong>
+                    <span>Especially useful when a provider stops mid-thought.</span>
+                    <div class="corner">retry loop</div>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">E · Finalization</div>
+                    <h3>Stitch + package</h3>
+                  </div>
+
+                  <div class="node" data-title="Stitching stage" data-body="If follow-up output exists and stitching is enabled, the system asks the same winning provider to merge the original winning answer and the continuation into a single polished final response. If stitching is disabled or there is no follow-up output, the step is marked skipped." data-tags="Stitching, Merge final response, Optional stage">
+                    <small>Polish layer</small>
+                    <strong>Combines base answer + continuation</strong>
+                    <span>Helps the final output read like one coherent deliverable.</span>
+                    <div class="corner">optional</div>
+                  </div>
+
+                  <div class="node" data-title="Final output selection and artifact write" data-body="get_final_output_text chooses the best available final text in this order: stitched result, post-action result, winner output, OpenAI fallback, Claude fallback. save_outputs then writes both JSON and HTML artifacts into outputs/ and returns relative paths for the API to publish." data-tags="Final output, save_outputs, HTML report, JSON record">
+                    <small>Packaging</small>
+                    <strong>Finalize, persist, expose</strong>
+                    <span>The run becomes both readable and portable once artifacts are saved.</span>
+                    <div class="corner">outputs/</div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div class="diagram-panel tab-panel hidden js-measure-panel" id="tab-orchestration">
-            <div class="diagram-title">
-              <div>
-                <h2>Model Orchestration Engine</h2>
-                <p>Internal control flow inside <code>run_autonomous_compare</code> and <code>run_autonomous_loop</code>.</p>
-              </div>
-            </div>
-
-            <div class="flow-grid-5">
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Phase 1</div>
-                  <h3>Initialization</h3>
+              <div class="footer-grid">
+                <div class="footer-card">
+                  <h3>Why this engine matters</h3>
+                  <ul>
+                    <li>It is not just multi-model; it is multi-model with memory of what happened.</li>
+                    <li>It turns provider comparison into a decision system with autonomous next steps.</li>
+                    <li>It preserves enough metadata for later analysis and continuous refinement.</li>
+                    <li>It already supports side-by-side ON/OFF optimizer testing in practice.</li>
+                  </ul>
                 </div>
-                <div class="node accent-blue" data-title="Configuration and clients" data-body="The runner loads environment variables for model names, tokens, timeouts, optimization defaults, stitching defaults, and API keys. It initializes OpenAI and Anthropic clients up front." data-tags="Env,Clients,Config">
-                  <small>Config</small><strong>Configuration + API clients</strong><span>Models, timeouts, keys, defaults.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-blue" data-title="Logging envelope" data-body="A log list is created and populated through run_step wrappers. Each step records START / DONE / FAIL and duration, which later feeds the response payload and queued job state mapping." data-tags="Logging,run_step">
-                  <small>Observability</small><strong>Step-wrapped logging</strong><span>Traceable execution chronology.</span>
-                </div>
-              </div>
-
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Phase 2</div>
-                  <h3>Prompt preparation</h3>
-                </div>
-                <div class="node accent-cyan" data-title="Optimize prompt" data-body="optimize_prompt can run as compare_both, single_openai, or single_claude. It returns optimized_prompt, explanation, variants, provider metadata, and optional selection rationale." data-tags="Prompt optimization,compare_both">
-                  <small>Preparation</small><strong>Optimize prompt</strong><span>Transforms original prompt into active prompt.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-cyan" data-title="Active prompt established" data-body="The workflow strips and validates the optimized prompt, then begins autonomous loop iterations against that active prompt." data-tags="Active prompt">
-                  <small>Preparation</small><strong>Establish active prompt</strong><span>Single canonical prompt for execution.</span>
-                </div>
-              </div>
-
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Phase 3</div>
-                  <h3>Parallel execution</h3>
-                </div>
-                <div class="node accent-green" data-title="OpenAI initial" data-body="OpenAI initial call produces ProviderResult with provider, model, prompt, text, error, and response_id. That response_id becomes the anchor for future follow-up turns if OpenAI wins." data-tags="OpenAI,ProviderResult">
-                  <small>Provider A</small><strong>OpenAI initial call</strong><span>Responses API + response state tracking.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-green" data-title="Claude initial" data-body="Claude initial call produces ProviderResult with provider, model, prompt, text, error, and response_id. Message history is retained in ClaudeChatState for follow-up turns if Claude wins." data-tags="Claude,ClaudeChatState">
-                  <small>Provider B</small><strong>Claude initial call</strong><span>Messages API + rolling message state.</span>
-                </div>
-              </div>
-
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Phase 4</div>
-                  <h3>Judge-driven control</h3>
-                </div>
-                <div class="node accent-amber" data-title="Structured judge decision" data-body="judge_outputs returns a structured decision payload: winner, next_action, reason, revised_prompt, follow_up_prompt, rerun_target, confidence, and both scorecards. A safe fallback judge exists if structured judging fails." data-tags="JudgeDecision,JSON schema">
-                  <small>Decision</small><strong>Structured judge decision</strong><span>Winner + scorecards + next action.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-amber" data-title="Action branching" data-body="The loop branches into accept, revise_prompt_and_rerun, or follow_up_on_winner. If rerun_target is Both, the active prompt is revised and the loop continues." data-tags="Branching,Rerun,Both">
-                  <small>Control logic</small><strong>Action branching</strong><span>Accept, rerun, or follow-up.</span>
-                </div>
-              </div>
-
-              <div class="column">
-                <div class="col-head">
-                  <div class="eyebrow">Phase 5</div>
-                  <h3>Refinement & save</h3>
-                </div>
-                <div class="node accent-rose" data-title="Continuation and stitching" data-body="If follow_up_on_winner is chosen, the selected provider gets a continuation prompt. Multiple continuation attempts may occur. If stitching is enabled, a final cleanup pass merges the original and continuation into one final response." data-tags="Continuation,Stitching">
-                  <small>Finalization</small><strong>Continuation + stitching</strong><span>Recovers incomplete winning answers.</span><div class="tap-hint">Tap for details</div>
-                </div>
-                <div class="node accent-rose" data-title="Final output extraction and save_outputs" data-body="The workflow chooses the final answer from stitched_result, post_action_result, or winning provider output, then writes HTML and JSON output artifacts and returns a user-facing success payload." data-tags="save_outputs,final_output,HTML,JSON">
-                  <small>Delivery</small><strong>Final output extraction + save</strong><span>Artifact files plus final response payload.</span>
+                <div class="footer-card">
+                  <h3>Current implementation boundaries</h3>
+                  <ul>
+                    <li>Judge selection is centered on OpenAI as the judging model unless fallback logic is used.</li>
+                    <li>Stitching is provider-specific and follows the chosen winner path.</li>
+                    <li>Token/cost telemetry and external monitoring are not yet visible in the current code snapshot.</li>
+                    <li>Scaling this architecture further would likely mean separating API and worker responsibilities.</li>
+                  </ul>
                 </div>
               </div>
             </div>
+          </section>
 
-            <div class="footer-grid">
-              <div class="footer-card">
-                <h3>Observed strengths in the current design</h3>
-                <ul>
-                  <li>Parallel model execution rather than sequential waiting.</li>
-                  <li>Clear separation between provider call logic, judging, prompt optimization, and output reporting.</li>
-                  <li>Strong traceability via logs, iteration records, scorecards, optimizer metadata, and artifact files.</li>
-                  <li>Both direct execution and queued-state patterns exist in the same project.</li>
-                </ul>
-              </div>
-              <div class="footer-card">
-                <h3>Architectural caveats visible in the repo</h3>
-                <ul>
-                  <li>Optimizer appears implemented but forced off via debug flags in both app and runner.</li>
-                  <li>The queued path uses a thread inside the app process, not a dedicated external worker service.</li>
-                  <li>The current file ingestion path is text-centric; richer parsing for PDFs, DOCX, spreadsheets, and images is not evident here.</li>
-                  <li>Auth, user roles, and persistent user/run history beyond Redis job snapshots are not apparent.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div class="diagram-panel tab-panel hidden js-measure-panel" id="tab-deployment">
-            <div class="diagram-title">
-              <div>
-                <h2>State, Hosting & Repo Gaps</h2>
-                <p>Current components visible in the repo, plus the most likely missing layers if you later want to extend this into a broader production-ready architecture.</p>
-              </div>
-            </div>
-
-            <div class="matrix">
-              <div class="matrix-card" data-title="Visible in repo: Hosting-ready app shape" data-body="The current repo has a hosted-web-app shape: FastAPI app, static outputs mount, custom browser UI, environment-based secrets, Redis-backed job state, and downloadable artifacts. The previous architecture file also explicitly references Render-hosted deployment intent." data-tags="Hosting,FastAPI,Render">
-                <small>Present now</small><strong>Hosting-ready app shape</strong><span>FastAPI + UI + outputs + secrets-driven config.</span><div class="tap-hint">Tap for details</div>
-              </div>
-              <div class="matrix-card" data-title="Visible in repo: Redis as state spine" data-body="Redis is used for job persistence and status retrieval in the queued path. Job data includes stage, timestamps, request payload, provider statuses, artifacts, and final output." data-tags="Redis,Jobs,Status">
-                <small>Present now</small><strong>Redis as state spine</strong><span>Job_id, polling, stateful execution tracking.</span><div class="tap-hint">Tap for details</div>
-              </div>
-              <div class="matrix-card" data-title="Visible in repo: Artifacts as first-class outputs" data-body="HTML and JSON artifacts are intentionally generated on every successful run and exposed through a static mount, making the architecture naturally shareable and reviewable." data-tags="Artifacts,Sharing,Traceability">
-                <small>Present now</small><strong>Artifact-first design</strong><span>Outputs are review surfaces, not just side effects.</span>
-              </div>
-
-              <div class="matrix-card" data-title="Not clearly present: deployment manifests" data-body="This repo snapshot does not appear to include Dockerfile, render.yaml, Procfile, Terraform, Kubernetes manifests, or CI/CD workflow definitions. Hosting intent is visible, but deployment topology is not fully codified here." data-tags="Missing,Docker,Render config,CI/CD">
-                <small>Missing / unclear</small><strong>Deployment manifests</strong><span>Hosting intent is visible; infra-as-code is not.</span><div class="tap-hint">Tap for details</div>
-              </div>
-              <div class="matrix-card" data-title="Not clearly present: dedicated worker separation" data-body="The queued execution path uses an in-process Python thread. There is no visible separate worker service, job queue broker beyond Redis storage, or horizontally separated executor tier in this repo snapshot." data-tags="Missing,Worker tier,Queue architecture">
-                <small>Missing / unclear</small><strong>Dedicated worker separation</strong><span>Queued pattern exists, but not a separate worker service.</span><div class="tap-hint">Tap for details</div>
-              </div>
-              <div class="matrix-card" data-title="Not clearly present: auth, access, tenancy" data-body="No auth middleware, login system, API authorization, stakeholder access controls, or multi-tenant boundaries are obvious in the current repo snapshot." data-tags="Missing,Auth,Access control">
-                <small>Missing / unclear</small><strong>Auth & access control</strong><span>Useful for leadership sharing later if broadened.</span>
-              </div>
-
-              <div class="matrix-card" data-title="Not clearly present: rich file parsing pipeline" data-body="The current upload path decodes text and labels unsupported/binary content when decoding fails. There is no visible OCR pipeline, PDF parser, DOCX parser, spreadsheet parser, vector store, or retrieval layer." data-tags="Missing,Parsers,RAG">
-                <small>Missing / unclear</small><strong>Rich file parsing pipeline</strong><span>Current file support appears text-first.</span><div class="tap-hint">Tap for details</div>
-              </div>
-              <div class="matrix-card" data-title="Not clearly present: long-term run history and analytics" data-body="Artifacts and job status exist, but there is no visible run catalog UI, analytics store, audit dashboard, model cost telemetry, or experiment history browser in this repo snapshot." data-tags="Missing,Analytics,History,Observability">
-                <small>Missing / unclear</small><strong>Run history & analytics</strong><span>Great future layer if you want leadership visibility.</span><div class="tap-hint">Tap for details</div>
-              </div>
-              <div class="matrix-card" data-title="Not clearly present: external knowledge integration" data-body="This repo focuses on prompt execution and uploaded context. It does not visibly include CRM, knowledge base, document store, Slack, Salesforce, or demo asset integrations yet." data-tags="Missing,Integrations,Knowledge sources">
-                <small>Missing / unclear</small><strong>Knowledge integrations</strong><span>Natural next expansion if you scale the tool.</span>
-              </div>
-            </div>
-
-            <div class="footer-grid">
-              <div class="footer-card">
-                <h3>What appears to be missing from the repo</h3>
-                <ul>
-                  <li>Deployment/config manifests for the hosting layer.</li>
-                  <li>Dedicated worker/service separation beyond in-process threads.</li>
-                  <li>Authentication, role-based access, and stakeholder gating.</li>
-                  <li>Rich parsing and retrieval for non-text uploaded artifacts.</li>
-                  <li>Persistent run catalog, analytics, cost telemetry, and monitoring.</li>
-                </ul>
-                <div class="callout">
-                  That does <strong>not</strong> mean your architecture is weak — it means the repo is strong on orchestration core and lighter on platform-hardening layers.
+          <section id="tab-ui" class="tab-panel hidden">
+            <div class="diagram-panel">
+              <div class="diagram-title">
+                <div>
+                  <h2>Dashboard, artifacts, and operator experience</h2>
+                  <p>
+                    This tab focuses on what the user actually sees and how the frontend maps to backend payloads.
+                  </p>
                 </div>
               </div>
-              <div class="footer-card">
-                <h3>Why this version works for mixed technical stakeholders</h3>
-                <ul>
-                  <li>Leadership can see the full system shape without reading code.</li>
-                  <li>Solution consultants can understand what is already real versus what is still implied or future-state.</li>
-                  <li>Technical reviewers can inspect the parallelism, judging, stitching, artifacts, and job-state patterns in one place.</li>
-                  <li>You can peel this back later into a simplified exec version without rebuilding the source asset.</li>
-                </ul>
-                <div class="callout">
-                  Click any architecture block to inspect it. The right-side panel is there so you can narrate the system live without extra slide notes.
+
+              <div class="matrix-grid">
+                <div class="matrix-card accent-blue" data-title="Run controls" data-body="The dashboard includes prompt input, max iterations, optimizer toggle, artifact toggle, and a run button. It is clearly designed as an operator workbench rather than a simple playground." data-tags="Controls, Prompt input, Run form, Operator console">
+                  <small>Operator inputs</small>
+                  <strong>Run configuration controls</strong>
+                  <span>Launches the job and sets workflow behavior from the UI.</span>
+                </div>
+                <div class="matrix-card accent-green" data-title="Progress and tracker" data-body="The UI renders a top status pill, progress bar, execution stage tracker, and workflow metrics from the job payload. Because backend steps are named and structured, the tracker can show real stage fidelity rather than cosmetic animation." data-tags="Progress bar, Tracker, Metrics, Stage fidelity">
+                  <small>Live status</small>
+                  <strong>Operational visibility during execution</strong>
+                  <span>Users can watch the workflow move through optimizer, providers, judge, follow-up, stitch, and artifacts.</span>
+                </div>
+                <div class="matrix-card accent-amber" data-title="Decision and comparison panes" data-body="The dashboard surfaces winner output, judge reasoning, model comparison cards, expandable full outputs, logs, and raw payload JSON. This makes it useful for testing, demonstrations, and internal rollout because the user can inspect why the workflow chose what it chose." data-tags="Judge reasoning, Comparison, Logs, Raw payload">
+                  <small>Inspection</small>
+                  <strong>Built-in explainability surface</strong>
+                  <span>Critical for trust, troubleshooting, and stakeholder storytelling.</span>
+                </div>
+                <div class="matrix-card accent-rose" data-title="Artifacts toggle nuance" data-body="The front-end sends generate_artifacts based on the Artifacts toggle, but the runner currently writes artifacts regardless and does not use that option in the save path. This should be represented honestly so teammates understand current behavior versus future intended control." data-tags="UI nuance, generate_artifacts, Backend mismatch, Current truth">
+                  <small>Truth in diagramming</small>
+                  <strong>UI control present, backend not fully wired</strong>
+                  <span>Important rollout note for demos and internal expectations.</span>
+                </div>
+              </div>
+
+              <div class="lane-title">Operator-facing surfaces</div>
+              <div class="flow-grid-3">
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">Surface 1</div>
+                    <h3>Live run monitoring</h3>
+                  </div>
+
+                  <div class="node" data-title="Top status strip" data-body="The hero area shows workflow status, progress percentage, active job id, and winner-linked artifact access. It keeps the user oriented without needing to open the raw payload." data-tags="Status strip, Job ID, Progress, Winner artifact">
+                    <small>Above the fold</small>
+                    <strong>Fast-glance run health</strong>
+                    <span>Supports operator confidence during execution.</span>
+                    <div class="corner">summary</div>
+                  </div>
+
+                  <div class="node" data-title="Execution tracker" data-body="The tracker maps directly to the named backend steps stored in Redis. That gives the UI a trustworthy and narratable stage view for demos and internal rollout." data-tags="Tracker, Step mapping, Demo-ready">
+                    <small>Stage view</small>
+                    <strong>Step-by-step lifecycle rendering</strong>
+                    <span>Much stronger than generic spinners or opaque loading states.</span>
+                    <div class="corner">steps</div>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">Surface 2</div>
+                    <h3>Result interpretation</h3>
+                  </div>
+
+                  <div class="node" data-title="Run summary and decision pane" data-body="Summary cards show winner, confidence, next action, optimization status, and progress. The decision area explains why the judge selected the result it did. This helps users move from 'what happened' to 'why it happened.'" data-tags="Summary cards, Decision rationale, Confidence">
+                    <small>Interpretation</small>
+                    <strong>From output to meaning</strong>
+                    <span>The UI explains not just the answer, but the decision behind it.</span>
+                    <div class="corner">reasoning</div>
+                  </div>
+
+                  <div class="node" data-title="Model comparison panel" data-body="The comparison area shows OpenAI and Claude outputs side by side with expandable full-text views and model metadata. It supports evaluation and iterative tuning across prompt strategies and optimizer settings." data-tags="OpenAI, Claude, Side-by-side, Evaluation">
+                    <small>Comparison</small>
+                    <strong>Head-to-head result analysis</strong>
+                    <span>Especially useful for optimizer ON versus OFF validation work.</span>
+                    <div class="corner">A/B review</div>
+                  </div>
+                </div>
+
+                <div class="column">
+                  <div class="col-head">
+                    <div class="eyebrow">Surface 3</div>
+                    <h3>Post-run outputs</h3>
+                  </div>
+
+                  <div class="node" data-title="Artifact list" data-body="When the run completes, the UI normalizes artifact objects and renders clickable entries that point to the static /outputs mount. This makes the HTML report and JSON run record part of the interactive workflow rather than hidden server files." data-tags="Artifact list, /outputs, Static links, Deliverables">
+                    <small>Deliverables</small>
+                    <strong>Generated files surfaced in product</strong>
+                    <span>Operators can inspect and share outputs immediately.</span>
+                    <div class="corner">download/open</div>
+                  </div>
+
+                  <div class="node" data-title="Logs and raw payload" data-body="The UI includes both a log stream and a raw JSON tab. That is important because it turns the dashboard into a lightweight observability console for technical users and rollout partners." data-tags="Logs, Raw JSON, Transparency, Supportability">
+                    <small>Technical visibility</small>
+                    <strong>Built-in troubleshooting lens</strong>
+                    <span>Useful when explaining issues, debugging runs, or training teammates.</span>
+                    <div class="corner">ops</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="footer-grid">
+                <div class="footer-card">
+                  <h3>Why this UI matters for team rollout</h3>
+                  <ul>
+                    <li>It helps non-developers understand the workflow without reading backend code.</li>
+                    <li>It reinforces trust by showing progress, reasoning, and final artifacts in one place.</li>
+                    <li>It makes optimizer experiments and model comparisons much easier to socialize.</li>
+                    <li>It creates a credible internal product feel instead of a one-off script demo.</li>
+                  </ul>
+                </div>
+                <div class="footer-card">
+                  <h3>Good next evolution after this state</h3>
+                  <ul>
+                    <li>Wire artifact toggle behavior all the way through the runner.</li>
+                    <li>Introduce server-sent events or websockets for richer live status.</li>
+                    <li>Split worker execution into a dedicated process or queue-backed service.</li>
+                    <li>Add richer uploaded-file parsing for structured docs beyond text append.</li>
+                  </ul>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
         <aside class="inspector">
           <h3>Node Inspector</h3>
           <div class="muted">
-            Click any box in the active tab to inspect it. This keeps the page visually clean while still letting you speak to specifics live.
+            Click any block in the active tab to inspect it. This lets the page stay clean while still supporting live narration with your team.
           </div>
 
           <div class="detail-box">
             <h4 id="detail-title">Start with any node</h4>
             <div class="muted" id="detail-body">
-              This file is intentionally comprehensive and interactive. The repo strongly supports the core orchestration architecture, while a few platform layers still look absent or external to the current snapshot.
+              This version is intentionally current-state accurate. It highlights the real deployed flow, the real data contract between backend and frontend, and the few places where UI intent is slightly ahead of backend enforcement.
             </div>
-            <div class="detail-tag-row" id="detail-tags">
-              <div class="tag">Interactive explorer</div>
-              <div class="tag">Comprehensive first cut</div>
+            <div class="tag-row" id="detail-tags">
+              <div class="tag">Current state</div>
+              <div class="tag">Interactive architecture</div>
               <div class="tag">Single HTML artifact</div>
             </div>
           </div>
 
-          <div class="mini-panel detail-box">
-            <h4>Quick reading guide</h4>
+          <div class="detail-box">
+            <h4>How to use this with your team</h4>
             <ul>
-              <li><strong>System Overview</strong> for the broad architecture story.</li>
-              <li><strong>Request Lifecycle</strong> for how requests actually move today.</li>
-              <li><strong>Model Orchestration</strong> for the engine internals.</li>
-              <li><strong>State, Hosting & Repo Gaps</strong> for what's present versus missing.</li>
+              <li>Use <strong>System Overview</strong> for a broad architectural walkthrough.</li>
+              <li>Use <strong>API + Job State</strong> when talking through operational flow and status handling.</li>
+              <li>Use <strong>Orchestration Engine</strong> when you need to explain the intelligence layer.</li>
+              <li>Use <strong>Dashboard + Deliverables</strong> when describing why this is rollout-ready.</li>
             </ul>
           </div>
         </aside>
       </div>
     </section>
   </div>
-
-  <script>
-    const tabs = document.querySelectorAll('.tab');
-    const panels = {
-      overview: document.getElementById('tab-overview'),
-      lifecycle: document.getElementById('tab-lifecycle'),
-      orchestration: document.getElementById('tab-orchestration'),
-      deployment: document.getElementById('tab-deployment')
-    };
-
-    function syncInspectorHeight(){
-      const activePanel = document.querySelector('.tab-panel:not(.hidden)');
-      const inspector = document.querySelector('.inspector');
-      if(!activePanel || !inspector) return;
-      inspector.style.setProperty('--inspector-min-height', activePanel.offsetHeight + 'px');
-    }
-
-    tabs.forEach(btn => {
-      btn.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        btn.classList.add('active');
-        const key = btn.dataset.tab;
-        Object.entries(panels).forEach(([k,p]) => {
-          p.classList.toggle('hidden', k !== key);
-        });
-        document.querySelectorAll('.node,.step,.path-step,.matrix-card').forEach(el => el.classList.remove('active'));
-        requestAnimationFrame(syncInspectorHeight);
-      });
-    });
-
-    const detailTitle = document.getElementById('detail-title');
-    const detailBody = document.getElementById('detail-body');
-    const detailTags = document.getElementById('detail-tags');
-
-    function activateDetail(el){
-      document.querySelectorAll('.node,.step,.path-step,.matrix-card').forEach(n => n.classList.remove('active'));
-      el.classList.add('active');
-      detailTitle.textContent = el.dataset.title || 'Architecture node';
-      detailBody.textContent = el.dataset.body || '';
-      detailTags.innerHTML = '';
-      const tags = (el.dataset.tags || '').split(',').map(t => t.trim()).filter(Boolean);
-      if(!tags.length){
-        const tag = document.createElement('div');
-        tag.className = 'tag';
-        tag.textContent = 'Architecture detail';
-        detailTags.appendChild(tag);
-      } else {
-        tags.forEach(t => {
-          const tag = document.createElement('div');
-          tag.className = 'tag';
-          tag.textContent = t;
-          detailTags.appendChild(tag);
-        });
-      }
-    }
-
-    document.querySelectorAll('.node,.step,.path-step,.matrix-card').forEach(el => {
-      el.addEventListener('click', () => activateDetail(el));
-    });
-
-    window.addEventListener('load', syncInspectorHeight);
-    window.addEventListener('resize', () => {
-      const inspector = document.querySelector('.inspector');
-      if (window.innerWidth <= 1120) {
-        if (inspector) inspector.style.removeProperty('--inspector-min-height');
-      } else {
-        syncInspectorHeight();
-      }
-    });
-  </script>
 
   <div class="mobile-sheet-backdrop" id="mobileSheetBackdrop" aria-hidden="true"></div>
   <div class="mobile-sheet" id="mobileSheet" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="mobileSheetTitle">
@@ -1299,123 +1370,151 @@
     </div>
   </div>
 
+  <script>
+    const tabs = document.querySelectorAll('.tab');
+    const panels = {
+      overview: document.getElementById('tab-overview'),
+      api: document.getElementById('tab-api'),
+      engine: document.getElementById('tab-engine'),
+      ui: document.getElementById('tab-ui')
+    };
 
-  <script id="mobile-ux-script">
-    (function(){
-      const clickableSelector = '.node,.step,.path-step,.matrix-card';
-      const mobileSheet = document.getElementById('mobileSheet');
-      const mobileSheetBackdrop = document.getElementById('mobileSheetBackdrop');
-      const mobileSheetClose = document.getElementById('mobileSheetClose');
-      const mobileSheetTitle = document.getElementById('mobileSheetTitle');
-      const mobileSheetBody = document.getElementById('mobileSheetBody');
-      const mobileSheetTags = document.getElementById('mobileSheetTags');
+    const clickables = '.node,.step,.matrix-card,.timeline-card';
+    const detailTitle = document.getElementById('detail-title');
+    const detailBody = document.getElementById('detail-body');
+    const detailTags = document.getElementById('detail-tags');
 
-      function isMobileInspectorMode(){
-        return window.innerWidth <= 1120;
-      }
+    const mobileSheet = document.getElementById('mobileSheet');
+    const mobileSheetBackdrop = document.getElementById('mobileSheetBackdrop');
+    const mobileSheetClose = document.getElementById('mobileSheetClose');
+    const mobileSheetTitle = document.getElementById('mobileSheetTitle');
+    const mobileSheetBody = document.getElementById('mobileSheetBody');
+    const mobileSheetTags = document.getElementById('mobileSheetTags');
 
-      function ensureTapHints(){
-        if (window.innerWidth > 760) return;
-        document.querySelectorAll(clickableSelector).forEach(el => {
-          if (!el.querySelector('.tap-hint')) {
-            const hint = document.createElement('div');
-            hint.className = 'tap-hint';
-            hint.textContent = 'Tap for details';
-            el.appendChild(hint);
-          }
+    function activateDetail(el) {
+      document.querySelectorAll(clickables).forEach(node => node.classList.remove('active'));
+      el.classList.add('active');
+
+      const title = el.dataset.title || 'Architecture detail';
+      const body = el.dataset.body || '';
+      const tags = (el.dataset.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+      detailTitle.textContent = title;
+      detailBody.textContent = body;
+      detailTags.innerHTML = '';
+
+      if (!tags.length) {
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.textContent = 'Architecture detail';
+        detailTags.appendChild(tag);
+      } else {
+        tags.forEach(text => {
+          const tag = document.createElement('div');
+          tag.className = 'tag';
+          tag.textContent = text;
+          detailTags.appendChild(tag);
         });
       }
 
-      function populateSheet(el){
-        const title = el.dataset.title || 'Node details';
-        const body = el.dataset.body || '';
-        const tags = (el.dataset.tags || '').split(',').map(t => t.trim()).filter(Boolean);
-
-        mobileSheetTitle.textContent = title;
-        mobileSheetBody.textContent = body;
-        mobileSheetTags.innerHTML = '';
-
-        if (tags.length) {
-          tags.forEach(tagText => {
-            const tag = document.createElement('div');
-            tag.className = 'mobile-sheet-tag';
-            tag.textContent = tagText;
-            mobileSheetTags.appendChild(tag);
-          });
-        }
+      if (window.innerWidth <= 1120) {
+        openSheet(title, body, tags);
       }
+    }
 
-      function openSheet(el){
-        populateSheet(el);
-        mobileSheet.classList.add('open');
-        mobileSheetBackdrop.classList.add('open');
-        mobileSheet.setAttribute('aria-hidden', 'false');
-        mobileSheetBackdrop.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('sheet-open');
-      }
-
-      function closeSheet(){
-        mobileSheet.classList.remove('open');
-        mobileSheetBackdrop.classList.remove('open');
-        mobileSheet.setAttribute('aria-hidden', 'true');
-        mobileSheetBackdrop.setAttribute('aria-hidden', 'true');
-        document.body.classList.remove('sheet-open');
-      }
-
-      if (mobileSheetClose) mobileSheetClose.addEventListener('click', closeSheet);
-      if (mobileSheetBackdrop) mobileSheetBackdrop.addEventListener('click', closeSheet);
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeSheet();
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        const key = btn.dataset.tab;
+        Object.entries(panels).forEach(([panelKey, panelEl]) => {
+          panelEl.classList.toggle('hidden', panelKey !== key);
+        });
+        document.querySelectorAll(clickables).forEach(node => node.classList.remove('active'));
       });
+    });
 
-      // swipe down to dismiss feel
-      let startY = null;
-      let currentY = null;
-      if (mobileSheet) {
-        mobileSheet.addEventListener('touchstart', (e) => {
-          if (!mobileSheet.classList.contains('open')) return;
-          startY = e.touches[0].clientY;
-          currentY = startY;
-        }, {passive: true});
+    document.querySelectorAll(clickables).forEach(el => {
+      el.addEventListener('click', () => activateDetail(el));
+    });
 
-        mobileSheet.addEventListener('touchmove', (e) => {
-          if (startY === null) return;
-          currentY = e.touches[0].clientY;
-          const delta = Math.max(0, currentY - startY);
-          if (delta > 0) {
-            mobileSheet.style.transform = 'translateY(' + Math.min(delta, 180) + 'px)';
-          }
-        }, {passive: true});
-
-        mobileSheet.addEventListener('touchend', () => {
-          if (startY === null) return;
-          const delta = (currentY || startY) - startY;
-          mobileSheet.style.transform = '';
-          if (delta > 90) closeSheet();
-          startY = null;
-          currentY = null;
-        });
-      }
-
-      // Patch original activateDetail to also support mobile sheet behavior
-      document.querySelectorAll(clickableSelector).forEach(el => {
-        el.addEventListener('click', () => {
-          if (isMobileInspectorMode()) {
-            openSheet(el);
-          }
-        });
-      });
-
-      window.addEventListener('resize', () => {
-        ensureTapHints();
-        if (!isMobileInspectorMode()) {
-          closeSheet();
+    function ensureTapHints() {
+      if (window.innerWidth > 760) return;
+      document.querySelectorAll(clickables).forEach(el => {
+        if (!el.querySelector('.tap-hint')) {
+          const hint = document.createElement('div');
+          hint.className = 'tap-hint';
+          hint.textContent = 'Tap for details';
+          el.appendChild(hint);
         }
       });
+    }
 
-      window.addEventListener('load', ensureTapHints);
-    })();
+    function openSheet(title, body, tags) {
+      mobileSheetTitle.textContent = title;
+      mobileSheetBody.textContent = body;
+      mobileSheetTags.innerHTML = '';
+
+      (tags || []).forEach(text => {
+        const tag = document.createElement('div');
+        tag.className = 'mobile-sheet-tag';
+        tag.textContent = text;
+        mobileSheetTags.appendChild(tag);
+      });
+
+      mobileSheet.classList.add('open');
+      mobileSheetBackdrop.classList.add('open');
+      mobileSheet.setAttribute('aria-hidden', 'false');
+      mobileSheetBackdrop.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('sheet-open');
+    }
+
+    function closeSheet() {
+      mobileSheet.classList.remove('open');
+      mobileSheetBackdrop.classList.remove('open');
+      mobileSheet.setAttribute('aria-hidden', 'true');
+      mobileSheetBackdrop.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('sheet-open');
+    }
+
+    mobileSheetClose.addEventListener('click', closeSheet);
+    mobileSheetBackdrop.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeSheet();
+    });
+
+    let startY = null;
+    let currentY = null;
+    mobileSheet.addEventListener('touchstart', (e) => {
+      if (!mobileSheet.classList.contains('open')) return;
+      startY = e.touches[0].clientY;
+      currentY = startY;
+    }, { passive: true });
+
+    mobileSheet.addEventListener('touchmove', (e) => {
+      if (startY === null) return;
+      currentY = e.touches[0].clientY;
+      const delta = Math.max(0, currentY - startY);
+      if (delta > 0) {
+        mobileSheet.style.transform = 'translateY(' + Math.min(delta, 180) + 'px)';
+      }
+    }, { passive: true });
+
+    mobileSheet.addEventListener('touchend', () => {
+      if (startY === null) return;
+      const delta = (currentY || startY) - startY;
+      mobileSheet.style.transform = '';
+      if (delta > 90) closeSheet();
+      startY = null;
+      currentY = null;
+    });
+
+    window.addEventListener('resize', () => {
+      ensureTapHints();
+      if (window.innerWidth > 1120) closeSheet();
+    });
+
+    window.addEventListener('load', ensureTapHints);
   </script>
-
 </body>
 </html>
